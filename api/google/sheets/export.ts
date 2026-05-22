@@ -9,6 +9,7 @@ type ExportRequest = {
 }
 
 const SHEET_TITLE = 'RMS Review Votes'
+const sheetRange = `'${SHEET_TITLE.replaceAll("'", "''")}'!A1:J`
 
 const ensureSpreadsheet = async (accessToken: string) => {
   if (process.env.GOOGLE_SHEET_ID) return process.env.GOOGLE_SHEET_ID
@@ -46,11 +47,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const spreadsheetId = await ensureSpreadsheet(session.accessToken)
+    const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
     const values = [payload.headers, ...payload.rows]
     const response = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
-        SHEET_TITLE,
-      )}!A1:clear`,
+        sheetRange,
+      )}:clear`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.accessToken}` },
@@ -61,8 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const update = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
-        SHEET_TITLE,
-      )}!A1:append?valueInputOption=USER_ENTERED`,
+        sheetRange,
+      )}:append?valueInputOption=USER_ENTERED`,
       {
         method: 'POST',
         headers: {
@@ -74,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     )
 
     if (!update.ok) throw new Error('Could not append rows to Google Sheet.')
-    res.status(200).json({ spreadsheetId, updatedRows: payload.rows.length })
+    res.status(200).json({ spreadsheetId, spreadsheetUrl, updatedRows: payload.rows.length })
   } catch (error) {
     res.status(500).json({
       message: error instanceof Error ? error.message : 'Google Sheet export failed.',

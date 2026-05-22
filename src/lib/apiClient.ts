@@ -14,7 +14,7 @@ export const fetchLiveSubmissions = async () =>
   readJson<{ submissions: ArtistSubmission[] }>(await fetch('/api/jotform/submissions'))
 
 export const exportVotes = async (submissions: ArtistSubmission[], votes: ReviewState) =>
-  readJson<{ spreadsheetId: string; updatedRows: number }>(
+  readJson<{ spreadsheetId: string; spreadsheetUrl: string; updatedRows: number }>(
     await fetch('/api/google/sheets/export', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

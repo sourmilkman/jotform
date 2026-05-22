@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac } from 'node:crypto'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 export type GoogleSession = {
@@ -26,10 +26,7 @@ export const decodeSession = (cookie?: string): GoogleSession | null => {
   if (!payload || !signature) return null
 
   const expected = sign(payload)
-  const providedBuffer = Buffer.from(signature)
-  const expectedBuffer = Buffer.from(expected)
-  if (providedBuffer.length !== expectedBuffer.length) return null
-  if (!timingSafeEqual(providedBuffer, expectedBuffer)) return null
+  if (signature !== expected) return null
 
   try {
     return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as GoogleSession

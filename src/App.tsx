@@ -11,6 +11,7 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
@@ -36,6 +37,12 @@ const formatDate = (value: string) =>
     year: 'numeric',
   }).format(new Date(value))
 
+type ExportDialog =
+  | { status: 'idle' }
+  | { status: 'working'; message: string }
+  | { status: 'success'; message: string; spreadsheetUrl: string }
+  | { status: 'error'; message: string }
+
 function App() {
   const [submissions, setSubmissions] = useState<ArtistSubmission[]>(mockSubmissions)
   const [reviewState, setReviewState] = useState<ReviewState>({})
@@ -44,6 +51,8 @@ function App() {
   const [query, setQuery] = useState('')
   const [demoMode, setDemoMode] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
+  const [exportDialog, setExportDialog] = useState<ExportDialog>({ status: 'idle' })
   const [syncState, setSyncState] = useState<SyncState>({
     status: 'ready',
     message: 'Demo submissions loaded',
@@ -79,6 +88,7 @@ function App() {
     fetchCurrentUser()
       .then((user) => setUserEmail(user.email ?? null))
       .catch(() => setUserEmail(null))
+      .finally(() => setIsCheckingSession(false))
   }, [])
 
   const selectSubmission = (submission: ArtistSubmission) => {
@@ -150,11 +160,19 @@ function App() {
 
   const handleExport = async () => {
     setExportState('Exporting to Google Sheet')
+    setExportDialog({ status: 'working', message: 'Exporting votes to Google Sheets...' })
     try {
       const result = await exportVotes(submissions, reviewState)
-      setExportState(`Exported ${result.updatedRows} rows to ${result.spreadsheetId}`)
+      setExportState(`Exported ${result.updatedRows} rows`)
+      setExportDialog({
+        status: 'success',
+        message: `Exported ${result.updatedRows} artwork rows to Google Sheets.`,
+        spreadsheetUrl: result.spreadsheetUrl,
+      })
     } catch (error) {
-      setExportState(error instanceof Error ? error.message : 'Google Sheet export failed')
+      const message = error instanceof Error ? error.message : 'Google Sheet export failed'
+      setExportState(message)
+      setExportDialog({ status: 'error', message })
     }
   }
 
@@ -192,9 +210,16 @@ function App() {
             />
             Demo data
           </label>
-          <a className="signin-link" href="/api/auth/google/start">
-            {userEmail ?? 'Sign in'}
-          </a>
+          {userEmail ? (
+            <span className="signed-in-pill" title={`Signed in as ${userEmail}`}>
+              <ShieldCheck size={15} aria-hidden="true" />
+              {userEmail}
+            </span>
+          ) : (
+            <a className="signin-link" href="/api/auth/google/start">
+              {isCheckingSession ? 'Checking sign-in' : 'Sign in'}
+            </a>
+          )}
           <button type="button" className="secondary-button" onClick={handleSync}>
             <RotateCw size={16} aria-hidden="true" />
             Sync Jotform
@@ -371,6 +396,39 @@ function App() {
           </section>
         </aside>
       </section>
+
+      {exportDialog.status !== 'idle' ? (
+        <div className="dialog-backdrop" role="presentation">
+          <section className="export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title">
+            <button
+              type="button"
+              className="dialog-close"
+              aria-label="Close export status"
+              onClick={() => setExportDialog({ status: 'idle' })}
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+            <div className={`dialog-status ${exportDialog.status}`}>
+              {exportDialog.status === 'working' ? <RotateCw size={24} aria-hidden="true" /> : null}
+              {exportDialog.status === 'success' ? <Check size={24} aria-hidden="true" /> : null}
+              {exportDialog.status === 'error' ? <ThumbsDown size={24} aria-hidden="true" /> : null}
+            </div>
+            <h2 id="export-dialog-title">
+              {exportDialog.status === 'working'
+                ? 'Exporting'
+                : exportDialog.status === 'success'
+                  ? 'Export complete'
+                  : 'Export failed'}
+            </h2>
+            <p>{exportDialog.message}</p>
+            {exportDialog.status === 'success' ? (
+              <a className="primary-button dialog-link" href={exportDialog.spreadsheetUrl} target="_blank" rel="noreferrer">
+                Open Google Sheet
+              </a>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
     </main>
   )
 }

@@ -67,7 +67,8 @@ button {
 
 .primary-button,
 .secondary-button,
-.signin-link {
+.signin-link,
+.signed-in-pill {
   align-items: center;
   border-radius: 6px;
   display: inline-flex;
@@ -97,6 +98,16 @@ button {
   max-width: 220px;
   overflow: hidden;
   text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signed-in-pill {
+  background: #edf7f1;
+  border: 1px solid #79aa99;
+  color: #0e4b43;
+  max-width: 260px;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -513,6 +524,95 @@ button {
   padding: 0 14px;
 }
 
+.dialog-backdrop {
+  align-items: center;
+  background: rgba(18, 31, 28, 0.48);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 20;
+}
+
+.export-dialog {
+  background: #ffffff;
+  border: 1px solid #c9d8d2;
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(20, 31, 28, 0.28);
+  max-width: 420px;
+  padding: 24px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.dialog-close {
+  align-items: center;
+  background: #f6faf8;
+  border: 1px solid #c9d8d2;
+  border-radius: 6px;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 34px;
+}
+
+.dialog-status {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  height: 54px;
+  justify-content: center;
+  margin-bottom: 12px;
+  width: 54px;
+}
+
+.dialog-status.working {
+  background: #fff4df;
+  color: #a15c00;
+}
+
+.dialog-status.working svg {
+  animation: spin 1s linear infinite;
+}
+
+.dialog-status.success {
+  background: #edf7f1;
+  color: #0e4b43;
+}
+
+.dialog-status.error {
+  background: #fff1f0;
+  color: #b42318;
+}
+
+.export-dialog h2 {
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+
+.export-dialog p {
+  color: #4e625d;
+  margin: 0;
+}
+
+.dialog-link {
+  justify-content: center;
+  margin-top: 18px;
+  text-decoration: none;
+  width: 100%;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 1120px) {
   .workspace {
     grid-template-columns: 280px minmax(360px, 1fr);
@@ -538,7 +638,9 @@ button {
   }
 
   .primary-button,
-  .secondary-button {
+  .secondary-button,
+  .signin-link,
+  .signed-in-pill {
     flex: 1 1 180px;
     justify-content: center;
   }
