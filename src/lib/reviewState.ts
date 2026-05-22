@@ -1,15 +1,23 @@
-import type { ArtistSubmission, ArtworkVote, ReviewState, VoteValue } from '../types'
+import type { ArtistSubmission, ArtworkVote, ReviewState, VoteCounts } from '../types'
+
+export const emptyVoteCounts = (): VoteCounts => ({
+  yes: 0,
+  maybe: 0,
+  no: 0,
+})
+
+export const getVoteTotal = (counts: VoteCounts) => counts.yes + counts.maybe + counts.no
 
 export const buildVote = (
   submissionId: string,
   artworkId: string,
-  value: VoteValue,
+  counts: VoteCounts = emptyVoteCounts(),
   notes = '',
   updatedAt = new Date().toISOString(),
 ): ArtworkVote => ({
   submissionId,
   artworkId,
-  value,
+  counts,
   notes,
   updatedAt,
 })
@@ -26,7 +34,11 @@ export const getReviewProgress = (submissions: ArtistSubmission[], votes: Review
   const total = submissions.reduce((count, submission) => count + submission.artworks.length, 0)
   const reviewed = submissions.reduce(
     (count, submission) =>
-      count + submission.artworks.filter((artwork) => Boolean(votes[artwork.id]?.value)).length,
+      count +
+      submission.artworks.filter((artwork) => {
+        const vote = votes[artwork.id]
+        return vote ? getVoteTotal(vote.counts) > 0 : false
+      }).length,
     0,
   )
 

@@ -1,4 +1,8 @@
-export type VoteValue = 'Yes' | 'Maybe' | 'No' | null
+export type VoteCounts = {
+  yes: number
+  maybe: number
+  no: number
+}
 
 export type Artwork = {
   id: string
@@ -26,7 +30,7 @@ export type ArtistSubmission = {
 export type ArtworkVote = {
   artworkId: string
   submissionId: string
-  value: VoteValue
+  counts: VoteCounts
   notes: string
   updatedAt: string
 }

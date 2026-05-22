@@ -8,26 +8,22 @@ import {
   RotateCw,
   Search,
   ShieldCheck,
-  Sparkles,
-  ThumbsDown,
-  ThumbsUp,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { mockSubmissions } from './data/mockSubmissions'
 import { exportVotes, fetchCurrentUser, fetchLiveSubmissions } from './lib/apiClient'
-import { buildVote, getReviewProgress, upsertVote } from './lib/reviewState'
-import type { ArtistSubmission, ReviewState, SyncState, VoteValue } from './types'
+import { buildVote, emptyVoteCounts, getReviewProgress, upsertVote } from './lib/reviewState'
+import type { ArtistSubmission, ReviewState, SyncState, VoteCounts } from './types'
 
-const voteOptions: Array<{
-  value: Exclude<VoteValue, null>
+const voteCountOptions: Array<{
+  key: keyof VoteCounts
   label: string
-  icon: typeof ThumbsUp
 }> = [
-  { value: 'Yes', label: 'Yes', icon: ThumbsUp },
-  { value: 'Maybe', label: 'Maybe', icon: Sparkles },
-  { value: 'No', label: 'No', icon: ThumbsDown },
+  { key: 'yes', label: 'Yes' },
+  { key: 'maybe', label: 'Maybe' },
+  { key: 'no', label: 'No' },
 ]
 
 const formatDate = (value: string) =>
@@ -104,12 +100,16 @@ function App() {
     setSelectedArtworkId(selectedSubmission.artworks[nextIndex].id)
   }
 
-  const setVote = (value: VoteValue) => {
+  const setVoteCount = (key: keyof VoteCounts, nextValue: number) => {
     if (!selectedArtwork || !selectedSubmission) return
+    const currentCounts = selectedVote?.counts ?? emptyVoteCounts()
     const nextVote = buildVote(
       selectedSubmission.id,
       selectedArtwork.id,
-      value,
+      {
+        ...currentCounts,
+        [key]: Math.max(0, Math.min(13, nextValue)),
+      },
       selectedVote?.notes ?? '',
     )
     setReviewState((state) => upsertVote(state, nextVote))
@@ -121,7 +121,7 @@ function App() {
     const nextVote = buildVote(
       selectedSubmission.id,
       selectedArtwork.id,
-      selectedVote?.value ?? null,
+      selectedVote?.counts ?? emptyVoteCounts(),
       notes,
     )
     setReviewState((state) => upsertVote(state, nextVote))
@@ -140,7 +140,7 @@ function App() {
       return
     }
 
-    setSyncState({ status: 'syncing', message: 'Syncing Jotform submissions' })
+    setSyncState({ status: 'syncing', message: 'Pulling Jotform submissions' })
     try {
       const result = await fetchLiveSubmissions()
       setSubmissions(result.submissions)
@@ -222,7 +222,7 @@ function App() {
           )}
           <button type="button" className="secondary-button" onClick={handleSync}>
             <RotateCw size={16} aria-hidden="true" />
-            Sync Jotform
+            Pull from Jotform
           </button>
           <button type="button" className="primary-button" onClick={handleExport}>
             <Download size={16} aria-hidden="true" />
@@ -267,7 +267,10 @@ function App() {
 
           <div className="submission-list">
             {filteredSubmissions.map((submission) => {
-              const reviewed = submission.artworks.filter((artwork) => reviewState[artwork.id]?.value).length
+              const reviewed = submission.artworks.filter((artwork) => {
+                const vote = reviewState[artwork.id]
+                return vote ? vote.counts.yes + vote.counts.maybe + vote.counts.no > 0 : false
+              }).length
               return (
                 <button
                   type="button"
@@ -327,7 +330,7 @@ function App() {
                 aria-label={`View ${artwork.title}`}
               >
                 <img src={artwork.imageUrl} alt="" loading="lazy" />
-                {reviewState[artwork.id]?.value ? <Check size={14} aria-hidden="true" /> : null}
+                {reviewState[artwork.id] ? <Check size={14} aria-hidden="true" /> : null}
               </button>
             ))}
           </div>
@@ -339,22 +342,34 @@ function App() {
               <ShieldCheck size={18} aria-hidden="true" />
               <h2>Artwork vote</h2>
             </div>
-            <div className="vote-grid">
-              {voteOptions.map((option) => {
-                const Icon = option.icon
+            <div className="vote-count-grid">
+              {voteCountOptions.map((option) => {
+                const count = selectedVote?.counts[option.key] ?? 0
                 return (
-                  <button
-                    type="button"
-                    key={option.value}
-                    className={selectedVote?.value === option.value ? 'vote-button active' : 'vote-button'}
-                    onClick={() => setVote(option.value)}
-                  >
-                    <Icon size={18} aria-hidden="true" />
-                    {option.label}
-                  </button>
+                  <div className="vote-count-row" key={option.key}>
+                    <span>{option.label}</span>
+                    <div>
+                      <button
+                        type="button"
+                        aria-label={`Decrease ${option.label} votes`}
+                        onClick={() => setVoteCount(option.key, count - 1)}
+                      >
+                        -
+                      </button>
+                      <output aria-label={`${option.label} votes`}>{count}</output>
+                      <button
+                        type="button"
+                        aria-label={`Increase ${option.label} votes`}
+                        onClick={() => setVoteCount(option.key, count + 1)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 )
               })}
             </div>
+            <p className="vote-hint">Enter aggregate council totals. Counts are capped at 13.</p>
             <label className="notes-field">
               Notes
               <textarea
@@ -411,7 +426,7 @@ function App() {
             <div className={`dialog-status ${exportDialog.status}`}>
               {exportDialog.status === 'working' ? <RotateCw size={24} aria-hidden="true" /> : null}
               {exportDialog.status === 'success' ? <Check size={24} aria-hidden="true" /> : null}
-              {exportDialog.status === 'error' ? <ThumbsDown size={24} aria-hidden="true" /> : null}
+              {exportDialog.status === 'error' ? <X size={24} aria-hidden="true" /> : null}
             </div>
             <h2 id="export-dialog-title">
               {exportDialog.status === 'working'

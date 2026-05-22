@@ -6,10 +6,10 @@ Private PWA for reviewing RMS exhibition submissions from Jotform without living
 
 - React + Vite + TypeScript PWA review workspace.
 - Demo submissions so the judging flow works before live Jotform entries exist.
-- Per-artwork `Yes`, `Maybe`, `No` votes and notes.
+- Per-artwork aggregate council vote counts for `Yes`, `Maybe`, and `No`, plus notes.
 - Jotform EU API sync endpoint for form `233391657291361`.
 - Google OAuth endpoints restricted by `GOOGLE_ALLOWED_EMAIL`.
-- Google Sheets export endpoint that writes one row per artwork.
+- Google Sheets export endpoint that writes one row per artist with up to six artwork groups.
 
 ## Local Development
 
