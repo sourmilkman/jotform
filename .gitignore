@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 .playwright-cli
+client_secret*.json
+OAuth Client details*
 
 # Editor directories and files
 .vscode/*
