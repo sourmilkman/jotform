@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RMS Review">
+  <rect width="512" height="512" rx="84" fill="#0e4b43"/>
+  <rect x="102" y="96" width="308" height="320" rx="24" fill="#f5f7f4"/>
+  <rect x="138" y="138" width="236" height="156" rx="12" fill="#9db8ad"/>
+  <path d="M138 342h236" stroke="#0e4b43" stroke-width="28" stroke-linecap="round"/>
+  <path d="M154 224l54-48 48 42 34-30 70 62" fill="none" stroke="#f5f7f4" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
