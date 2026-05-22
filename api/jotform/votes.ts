@@ -30,6 +30,16 @@ type VoteRequest = {
 }
 
 type FieldMap = Record<string, string>
+type JotformQuestion = {
+  qid?: string
+  name?: string
+  text?: string
+  order?: string
+}
+type JotformQuestionsResponse = {
+  content?: Record<string, JotformQuestion>
+  message?: string
+}
 
 const readVoteFieldMap = (): FieldMap => {
   if (process.env.JOTFORM_VOTE_FIELD_IDS) {
@@ -45,6 +55,46 @@ const readVoteFieldMap = (): FieldMap => {
 }
 
 const FORM_ID = '233391657291361'
+
+const normalizeKey = (value?: string) =>
+  (value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+
+const findArtworkVoteField = (questions: Record<string, JotformQuestion>, artworkNumber: number) => {
+  const candidates = Object.entries(questions).map(([id, question]) => ({
+    id,
+    key: normalizeKey(`${question.text ?? ''} ${question.name ?? ''}`),
+  }))
+
+  return candidates.find(({ key }) => (
+    key.includes('vote') &&
+    key.includes('artwork') &&
+    key.includes(String(artworkNumber))
+  ))?.id
+}
+
+const fetchVoteFieldMap = async (apiKey: string): Promise<FieldMap> => {
+  const explicitMap = readVoteFieldMap()
+  if (Object.keys(explicitMap).length > 0) return explicitMap
+
+  const response = await fetch(`https://eu-api.jotform.com/form/${FORM_ID}/questions`, {
+    headers: { APIKEY: apiKey },
+  })
+  const payload = await response.json().catch(() => null) as JotformQuestionsResponse | null
+
+  if (!response.ok) {
+    throw new Error(payload?.message ?? 'Could not read Jotform form questions.')
+  }
+
+  const questions = payload?.content ?? {}
+  return Object.fromEntries(
+    Array.from({ length: 6 }, (_, index) => {
+      const artworkNumber = index + 1
+      return [String(artworkNumber), findArtworkVoteField(questions, artworkNumber) ?? '']
+    }).filter(([, value]) => value),
+  )
+}
 
 const addVoteToCounts = (counts: VoteCounts, vote?: keyof VoteCounts): VoteCounts => ({
   ...counts,
@@ -68,15 +118,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let fieldMap: FieldMap
   try {
-    fieldMap = readVoteFieldMap()
-  } catch {
-    res.status(500).json({ message: 'JOTFORM_VOTE_FIELD_IDS is not valid JSON.' })
+    fieldMap = await fetchVoteFieldMap(apiKey)
+  } catch (error) {
+    res.status(500).json({
+      message: error instanceof Error ? error.message : 'Could not map Jotform vote fields.',
+    })
     return
   }
 
   if (Object.keys(fieldMap).length === 0) {
     res.status(500).json({
-      message: 'Jotform vote fields are not configured. Add JOTFORM_VOTE_FIELD_1 through JOTFORM_VOTE_FIELD_6 or JOTFORM_VOTE_FIELD_IDS.',
+      message: 'Could not find Jotform vote fields. Make sure the form has fields named like "Votes - Artwork 1" through "Votes - Artwork 6".',
     })
     return
   }
