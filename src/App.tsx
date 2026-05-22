@@ -47,6 +47,13 @@ const formatDate = (value: string) =>
 
 const LAST_SHEET_URL_KEY = 'rms-review:last-sheet-url'
 
+const readCookie = (name: string) =>
+  document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1)
+
 type ExportDialog =
   | { status: 'idle' }
   | { status: 'working'; message: string }
@@ -60,7 +67,10 @@ function App() {
   const [selectedArtworkId, setSelectedArtworkId] = useState(mockSubmissions[0]?.artworks[0]?.id ?? '')
   const [query, setQuery] = useState('')
   const [demoMode, setDemoMode] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(() => {
+    const email = readCookie('rms_review_email')
+    return email ? decodeURIComponent(email) : null
+  })
   const [lastSheetUrl, setLastSheetUrl] = useState<string | null>(() =>
     window.localStorage.getItem(LAST_SHEET_URL_KEY),
   )
@@ -99,7 +109,9 @@ function App() {
 
   useEffect(() => {
     fetchCurrentUser()
-      .then((user) => setUserEmail(user.email ?? null))
+      .then((user) => {
+        if (user.email) setUserEmail(user.email)
+      })
       .catch(() => setUserEmail(null))
       .finally(() => setIsCheckingSession(false))
   }, [])

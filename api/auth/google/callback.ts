@@ -38,10 +38,10 @@ const setSessionCookie = (
     expiresAt: number
   },
 ) => {
-  res.setHeader(
-    'Set-Cookie',
+  res.setHeader('Set-Cookie', [
     `rms_review_session=${encodeSession(session)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
-  )
+    `rms_review_email=${encodeURIComponent(session.email)}; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
+  ])
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
