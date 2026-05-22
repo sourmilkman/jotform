@@ -104,6 +104,27 @@ function App() {
     setSelectedArtworkId(selectedSubmission.artworks[nextIndex].id)
   }
 
+  const advanceAfterVote = () => {
+    if (!selectedSubmission || !selectedArtwork) return
+
+    const currentArtworkIndex = selectedSubmission.artworks.findIndex(
+      (artwork) => artwork.id === selectedArtwork.id,
+    )
+    const nextArtwork = selectedSubmission.artworks[currentArtworkIndex + 1]
+    if (nextArtwork) {
+      setSelectedArtworkId(nextArtwork.id)
+      return
+    }
+
+    const currentSubmissionIndex = submissions.findIndex(
+      (submission) => submission.id === selectedSubmission.id,
+    )
+    const nextSubmission = submissions[currentSubmissionIndex + 1]
+    if (nextSubmission) {
+      selectSubmission(nextSubmission)
+    }
+  }
+
   const selectedVoteKey = selectedVote
     ? selectedVote.value
     : undefined
@@ -118,6 +139,7 @@ function App() {
     )
     setReviewState((state) => upsertVote(state, nextVote))
     setExportState('Unsynced voting changes')
+    advanceAfterVote()
   }
 
   const setNotes = (notes: string) => {
