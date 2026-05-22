@@ -17,8 +17,8 @@ describe('reviewState', () => {
     })
     expect(getReviewProgress(mockSubmissions, state)).toMatchObject({
       reviewed: 1,
-      total: 11,
-      remaining: 10,
+      total: 31,
+      remaining: 30,
     })
   })
 })
