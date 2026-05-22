@@ -48,6 +48,18 @@ const sign = (payload: string) => {
   return createHmac('sha256', secret).update(payload).digest('base64url')
 }
 
+const encodeSession = (session: GoogleSession) => {
+  const payload = Buffer.from(JSON.stringify(session)).toString('base64url')
+  return `${payload}.${sign(payload)}`
+}
+
+const setSessionCookie = (res: VercelResponse, session: GoogleSession) => {
+  res.setHeader(
+    'Set-Cookie',
+    `${COOKIE_NAME}=${encodeSession(session)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
+  )
+}
+
 const getSession = (req: VercelRequest): GoogleSession | null => {
   const cookies = req.headers.cookie?.split(';').map((part) => part.trim()) ?? []
   const sessionCookie = cookies.find((cookie) => cookie.startsWith(`${COOKIE_NAME}=`))
@@ -62,6 +74,40 @@ const getSession = (req: VercelRequest): GoogleSession | null => {
   } catch {
     return null
   }
+}
+
+const refreshAccessToken = async (session: GoogleSession, res: VercelResponse) => {
+  if (Date.now() < session.expiresAt - 60_000) return session
+
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+  if (!clientId || !clientSecret || !session.refreshToken) {
+    throw new Error('Google session expired. Please sign in again.')
+  }
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: session.refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(await readGoogleError(response, 'Could not refresh Google sign-in. Please sign in again.'))
+  }
+
+  const token = await response.json() as { access_token: string; expires_in: number }
+  const refreshedSession = {
+    ...session,
+    accessToken: token.access_token,
+    expiresAt: Date.now() + token.expires_in * 1000,
+  }
+  setSessionCookie(res, refreshedSession)
+  return refreshedSession
 }
 
 const buildSheetPayload = (submissions: ArtistSubmission[]) => ({
@@ -157,12 +203,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  const body = req.body as ExportRequest
-  const submissions = body.submissions ?? []
-  const payload = buildSheetPayload(submissions)
-
   try {
-    const { spreadsheetId, spreadsheetUrl } = await ensureSpreadsheet(session.accessToken)
+    const activeSession = await refreshAccessToken(session, res)
+    const body = req.body as ExportRequest
+    const submissions = body.submissions ?? []
+    const payload = buildSheetPayload(submissions)
+    const { spreadsheetId, spreadsheetUrl } = await ensureSpreadsheet(activeSession.accessToken)
     const values = [payload.headers, ...payload.rows]
     const response = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
@@ -170,7 +216,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       )}:clear`,
       {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.accessToken}` },
+        headers: { Authorization: `Bearer ${activeSession.accessToken}` },
       },
     )
 
@@ -183,7 +229,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${activeSession.accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ values }),
