@@ -1,10 +1,28 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import {
-  addVoteToCounts,
-  formatVoteCounts,
-  type ArtistSubmission,
-  type ReviewState,
-} from '../_lib/common'
+
+type VoteCounts = {
+  yes: number
+  maybe: number
+  no: number
+}
+
+type ArtistSubmission = {
+  id: string
+  source: 'jotform' | 'demo'
+  artworks: Array<{
+    id: string
+    artworkNumber: number
+    voteCounts: VoteCounts
+  }>
+}
+
+type ArtworkVote = {
+  artworkId: string
+  submissionId: string
+  value: keyof VoteCounts
+}
+
+type ReviewState = Record<string, ArtworkVote>
 
 type VoteRequest = {
   submissions?: ArtistSubmission[]
@@ -27,6 +45,14 @@ const readVoteFieldMap = (): FieldMap => {
 }
 
 const FORM_ID = '233391657291361'
+
+const addVoteToCounts = (counts: VoteCounts, vote?: keyof VoteCounts): VoteCounts => ({
+  ...counts,
+  ...(vote ? { [vote]: counts[vote] + 1 } : {}),
+})
+
+const formatVoteCounts = (counts: VoteCounts) =>
+  `Yes: ${counts.yes}; Maybe: ${counts.maybe}; No: ${counts.no}`
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
