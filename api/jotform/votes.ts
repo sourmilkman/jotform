@@ -13,6 +13,7 @@ type ArtistSubmission = {
     id: string
     artworkNumber: number
     voteCounts: VoteCounts
+    jotformVoteFieldId?: string
   }>
 }
 
@@ -143,7 +144,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     for (const artwork of submission.artworks) {
       const vote = votes[artwork.id]
-      const fieldId = fieldMap[String(artwork.artworkNumber)]
+      const fieldId = artwork.jotformVoteFieldId ?? fieldMap[String(artwork.artworkNumber)]
       if (!vote || !fieldId) continue
 
       const updatedCounts = addVoteToCounts(artwork.voteCounts, vote.value)

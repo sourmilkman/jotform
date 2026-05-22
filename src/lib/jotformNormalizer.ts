@@ -100,6 +100,13 @@ const findArtworkField = (
   })
 }
 
+const findArtworkFieldEntry = (
+  answers: Record<string, JotformAnswer>,
+  artworkNumber: number,
+  kind: 'image' | 'title' | 'medium' | 'votes',
+) =>
+  Object.entries(answers).find(([, answer]) => answer === findArtworkField(answers, artworkNumber, kind))
+
 export const normalizeJotformSubmissions = (
   submissions: JotformSubmission[],
 ): ArtistSubmission[] =>
@@ -121,6 +128,7 @@ export const normalizeJotformSubmissions = (
         valueToString(findArtworkField(answers, artworkNumber, 'medium')?.answer) ||
         getAnswer(answers, ['medium']) ||
         'Medium not supplied'
+      const voteFieldEntry = findArtworkFieldEntry(answers, artworkNumber, 'votes')
 
       const fileName = imageUrl.split('/').pop()
       return {
@@ -131,8 +139,9 @@ export const normalizeJotformSubmissions = (
         medium,
         imageUrl,
         voteCounts: parseVoteCounts(
-          valueToString(findArtworkField(answers, artworkNumber, 'votes')?.answer),
+          valueToString(voteFieldEntry?.[1].answer),
         ),
+        ...(voteFieldEntry?.[0] ? { jotformVoteFieldId: voteFieldEntry[0] } : {}),
         ...(fileName ? { fileName } : {}),
       }
     }).filter((artwork): artwork is Artwork => artwork !== null)
