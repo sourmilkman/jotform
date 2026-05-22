@@ -631,6 +631,18 @@ button {
   margin: 0;
 }
 
+.export-dialog .dialog-error-message {
+  background: #fff7f6;
+  border: 1px solid #ffd6d2;
+  border-radius: 6px;
+  color: #8a1f17;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 10px;
+  padding: 10px;
+  text-align: left;
+}
+
 .dialog-link {
   justify-content: center;
   margin-top: 18px;

@@ -13,9 +13,31 @@ const quotedSheetTitle = `'${SHEET_TITLE.replaceAll("'", "''")}'`
 const clearRange = quotedSheetTitle
 const appendRange = `${quotedSheetTitle}!A1`
 
-const ensureSpreadsheet = async (accessToken: string) => {
-  if (process.env.GOOGLE_SHEET_ID) return process.env.GOOGLE_SHEET_ID
+type GoogleSpreadsheet = {
+  spreadsheetId: string
+  spreadsheetUrl?: string
+}
 
+const readGoogleError = async (response: Response, fallback: string) => {
+  const payload = await response.json().catch(() => null) as {
+    error?: { message?: string }
+  } | null
+
+  return payload?.error?.message ?? fallback
+}
+
+const canUseSpreadsheet = async (spreadsheetId: string, accessToken: string) => {
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=spreadsheetId,spreadsheetUrl`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  )
+
+  return response.ok
+}
+
+const createSpreadsheet = async (accessToken: string) => {
   const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
     method: 'POST',
     headers: {
@@ -28,9 +50,20 @@ const ensureSpreadsheet = async (accessToken: string) => {
     }),
   })
 
-  if (!response.ok) throw new Error('Could not create Google Sheet.')
-  const sheet = (await response.json()) as { spreadsheetId: string }
-  return sheet.spreadsheetId
+  if (!response.ok) throw new Error(await readGoogleError(response, 'Could not create Google Sheet.'))
+  return await response.json() as GoogleSpreadsheet
+}
+
+const ensureSpreadsheet = async (accessToken: string) => {
+  const configuredSpreadsheetId = process.env.GOOGLE_SHEET_ID
+  if (configuredSpreadsheetId && await canUseSpreadsheet(configuredSpreadsheetId, accessToken)) {
+    return {
+      spreadsheetId: configuredSpreadsheetId,
+      spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${configuredSpreadsheetId}/edit`,
+    }
+  }
+
+  return createSpreadsheet(accessToken)
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -48,8 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const payload = buildSheetPayload(submissions, votes)
 
   try {
-    const spreadsheetId = await ensureSpreadsheet(session.accessToken)
-    const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
+    const { spreadsheetId, spreadsheetUrl } = await ensureSpreadsheet(session.accessToken)
     const values = [payload.headers, ...payload.rows]
     const response = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
@@ -61,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     )
 
-    if (!response.ok) throw new Error('Could not clear existing sheet rows.')
+    if (!response.ok) throw new Error(await readGoogleError(response, 'Could not clear existing sheet rows.'))
 
     const update = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
@@ -77,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     )
 
-    if (!update.ok) throw new Error('Could not append rows to Google Sheet.')
+    if (!update.ok) throw new Error(await readGoogleError(update, 'Could not append rows to Google Sheet.'))
     res.status(200).json({ spreadsheetId, spreadsheetUrl, updatedRows: payload.rows.length })
   } catch (error) {
     res.status(500).json({

@@ -166,7 +166,7 @@ function App() {
       setExportState(`Exported ${result.updatedRows} rows`)
       setExportDialog({
         status: 'success',
-        message: `Exported ${result.updatedRows} artwork rows to Google Sheets.`,
+        message: `Exported ${result.updatedRows} artist rows to Google Sheets.`,
         spreadsheetUrl: result.spreadsheetUrl,
       })
     } catch (error) {
@@ -414,7 +414,12 @@ function App() {
 
       {exportDialog.status !== 'idle' ? (
         <div className="dialog-backdrop" role="presentation">
-          <section className="export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title">
+          <section
+            className="export-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="export-dialog-title"
+          >
             <button
               type="button"
               className="dialog-close"
@@ -435,7 +440,9 @@ function App() {
                   ? 'Export complete'
                   : 'Export failed'}
             </h2>
-            <p>{exportDialog.message}</p>
+            <p className={exportDialog.status === 'error' ? 'dialog-error-message' : undefined}>
+              {exportDialog.message || 'No error details were returned. Please try again.'}
+            </p>
             {exportDialog.status === 'success' ? (
               <a className="primary-button dialog-link" href={exportDialog.spreadsheetUrl} target="_blank" rel="noreferrer">
                 Open Google Sheet
