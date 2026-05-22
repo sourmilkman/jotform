@@ -176,7 +176,12 @@ function App() {
       <header className="topbar">
         <div>
           <p className="app-kicker">Private PWA</p>
-          <h1>RMS Review</h1>
+          <div className="brand-row">
+            <h1>RMS Review</h1>
+            <span title={`Version ${__APP_VERSION__}, build ${__BUILD_REF__}`}>
+              v{__APP_VERSION__} · {__BUILD_REF__}
+            </span>
+          </div>
         </div>
         <div className="topbar-actions" aria-label="Review actions">
           <label className="mode-toggle">
