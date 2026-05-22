@@ -31,5 +31,12 @@ export const submitVotesToJotform = async (submissions: ArtistSubmission[], vote
     }),
   )
 
+export const signOut = async () =>
+  readJson<{ ok: boolean }>(
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+    }),
+  )
+
 export const fetchCurrentUser = async () =>
   readJson<{ authenticated: boolean; email?: string }>(await fetch('/api/auth/me'))

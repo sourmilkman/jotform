@@ -68,6 +68,7 @@ button {
 .primary-button,
 .secondary-button,
 .signin-link,
+.sheet-link,
 .signed-in-pill {
   align-items: center;
   border-radius: 6px;
@@ -89,6 +90,16 @@ button {
   background: #ffffff;
   border: 1px solid #c9d8d2;
   color: #193b37;
+}
+
+.sheet-link {
+  text-decoration: none;
+}
+
+.sheet-link.disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .signin-link {
@@ -683,6 +694,7 @@ button {
   .primary-button,
   .secondary-button,
   .signin-link,
+  .sheet-link,
   .signed-in-pill {
     flex: 1 1 180px;
     justify-content: center;

@@ -4,7 +4,9 @@ import {
   ChevronRight,
   Cloud,
   Download,
+  FileSpreadsheet,
   ImageIcon,
+  LogOut,
   RotateCw,
   Search,
   ShieldCheck,
@@ -16,7 +18,13 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { mockSubmissions } from './data/mockSubmissions'
-import { exportVotes, fetchCurrentUser, fetchLiveSubmissions, submitVotesToJotform } from './lib/apiClient'
+import {
+  exportVotes,
+  fetchCurrentUser,
+  fetchLiveSubmissions,
+  signOut,
+  submitVotesToJotform,
+} from './lib/apiClient'
 import { buildVote, getReviewProgress, upsertVote } from './lib/reviewState'
 import type { ArtistSubmission, ReviewState, SyncState, VoteCounts } from './types'
 
@@ -37,6 +45,8 @@ const formatDate = (value: string) =>
     year: 'numeric',
   }).format(new Date(value))
 
+const LAST_SHEET_URL_KEY = 'rms-review:last-sheet-url'
+
 type ExportDialog =
   | { status: 'idle' }
   | { status: 'working'; message: string }
@@ -51,6 +61,9 @@ function App() {
   const [query, setQuery] = useState('')
   const [demoMode, setDemoMode] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [lastSheetUrl, setLastSheetUrl] = useState<string | null>(() =>
+    window.localStorage.getItem(LAST_SHEET_URL_KEY),
+  )
   const [isCheckingSession, setIsCheckingSession] = useState(true)
   const [exportDialog, setExportDialog] = useState<ExportDialog>({ status: 'idle' })
   const [syncState, setSyncState] = useState<SyncState>({
@@ -200,11 +213,18 @@ function App() {
         message: `Exported ${result.updatedRows} artist rows to Google Sheets.`,
         spreadsheetUrl: result.spreadsheetUrl,
       })
+      window.localStorage.setItem(LAST_SHEET_URL_KEY, result.spreadsheetUrl)
+      setLastSheetUrl(result.spreadsheetUrl)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Google Sheet export failed'
       setExportState(message)
       setExportDialog({ status: 'error', message })
     }
+  }
+
+  const handleSignOut = async () => {
+    await signOut().catch(() => undefined)
+    setUserEmail(null)
   }
 
   const handleSubmitVotes = async () => {
@@ -263,13 +283,19 @@ function App() {
             Demo data
           </label>
           {userEmail ? (
-            <span className="signed-in-pill" title={`Signed in as ${userEmail}`}>
-              <ShieldCheck size={15} aria-hidden="true" />
-              {userEmail}
-            </span>
+            <>
+              <span className="signed-in-pill" title={`Signed in as ${userEmail}`}>
+                <ShieldCheck size={15} aria-hidden="true" />
+                {userEmail}
+              </span>
+              <button type="button" className="secondary-button" onClick={handleSignOut}>
+                <LogOut size={16} aria-hidden="true" />
+                Sign out
+              </button>
+            </>
           ) : (
             <a className="signin-link" href="/api/auth/google/start">
-              {isCheckingSession ? 'Checking sign-in' : 'Sign in'}
+              {isCheckingSession ? 'Checking sign-in' : 'Sign in with Google'}
             </a>
           )}
           <button type="button" className="secondary-button" onClick={handleSync}>
@@ -284,6 +310,17 @@ function App() {
             <Download size={16} aria-hidden="true" />
             Export to Google Sheet
           </button>
+          <a
+            className={`secondary-button sheet-link ${lastSheetUrl ? '' : 'disabled'}`}
+            href={lastSheetUrl ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            aria-disabled={!lastSheetUrl}
+            title={lastSheetUrl ? 'Open your last exported Google Sheet' : 'Export first to create a Google Sheet link'}
+          >
+            <FileSpreadsheet size={16} aria-hidden="true" />
+            Open Google Sheet
+          </a>
         </div>
       </header>
 
