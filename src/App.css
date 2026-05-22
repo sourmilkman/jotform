@@ -465,6 +465,29 @@ button {
   margin: 10px 0 0;
 }
 
+.council-totals {
+  align-items: center;
+  background: #f6faf8;
+  border: 1px solid #dce4dd;
+  border-radius: 8px;
+  color: #3f5651;
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+  grid-template-columns: 1fr repeat(3, auto);
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.council-totals strong {
+  background: #ffffff;
+  border: 1px solid #cfdcd6;
+  border-radius: 6px;
+  color: #0e4b43;
+  padding: 4px 7px;
+}
+
 .notes-field {
   color: #405853;
   display: grid;

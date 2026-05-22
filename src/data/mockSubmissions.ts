@@ -22,6 +22,7 @@ export const mockSubmissions: ArtistSubmission[] = [
         title: 'Harbour Weather',
         medium: 'Oil on panel',
         imageUrl: image('photo-1500530855697-b586d89ba3ee'),
+        voteCounts: { yes: 4, maybe: 2, no: 1 },
         fileName: 'harbour-weather.jpg',
       },
       {
@@ -31,6 +32,7 @@ export const mockSubmissions: ArtistSubmission[] = [
         title: 'Blue Mooring',
         medium: 'Watercolour',
         imageUrl: image('photo-1507525428034-b723cf961d3e'),
+        voteCounts: { yes: 2, maybe: 3, no: 0 },
         fileName: 'blue-mooring.jpg',
       },
       {
@@ -40,6 +42,7 @@ export const mockSubmissions: ArtistSubmission[] = [
         title: 'Slipway Study',
         medium: 'Graphite and gouache',
         imageUrl: image('photo-1469474968028-56623f02e42e'),
+        voteCounts: { yes: 0, maybe: 1, no: 2 },
         fileName: 'slipway-study.jpg',
       },
     ],
@@ -61,6 +64,7 @@ export const mockSubmissions: ArtistSubmission[] = [
         title: 'Engine Room',
         medium: 'Acrylic',
         imageUrl: image('photo-1518005020951-eccb494ad742'),
+        voteCounts: { yes: 3, maybe: 4, no: 2 },
         fileName: 'engine-room.jpg',
       },
       {
@@ -70,6 +74,7 @@ export const mockSubmissions: ArtistSubmission[] = [
         title: 'Rivets at Dusk',
         medium: 'Mixed media',
         imageUrl: image('photo-1493246507139-91e8fad9978e'),
+        voteCounts: { yes: 1, maybe: 2, no: 3 },
         fileName: 'rivets-at-dusk.jpg',
       },
     ],
@@ -98,6 +103,7 @@ export const mockSubmissions: ArtistSubmission[] = [
         image('photo-1464822759023-fed622ff2c3b'),
         image('photo-1441974231531-c6227db76b6e'),
       ][index],
+      voteCounts: { yes: index, maybe: 1, no: 0 },
       fileName: `tide-mark-${index + 1}.jpg`,
     })),
   },

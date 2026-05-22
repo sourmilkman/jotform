@@ -11,6 +11,7 @@ export type Artwork = {
   title: string
   medium: string
   imageUrl: string
+  voteCounts: VoteCounts
   fileName?: string
 }
 
@@ -30,7 +31,7 @@ export type ArtistSubmission = {
 export type ArtworkVote = {
   artworkId: string
   submissionId: string
-  counts: VoteCounts
+  value: keyof VoteCounts
   notes: string
   updatedAt: string
 }

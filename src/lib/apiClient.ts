@@ -22,5 +22,14 @@ export const exportVotes = async (submissions: ArtistSubmission[], votes: Review
     }),
   )
 
+export const submitVotesToJotform = async (submissions: ArtistSubmission[], votes: ReviewState) =>
+  readJson<{ updatedSubmissions: number }>(
+    await fetch('/api/jotform/votes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ submissions, votes }),
+    }),
+  )
+
 export const fetchCurrentUser = async () =>
   readJson<{ authenticated: boolean; email?: string }>(await fetch('/api/auth/me'))

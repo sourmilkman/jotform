@@ -8,11 +8,11 @@ describe('reviewState', () => {
     const artwork = first.artworks[0]
     const state = upsertVote(
       {},
-      buildVote(first.id, artwork.id, { yes: 8, maybe: 3, no: 2 }, 'Strong piece', '2026-05-22T09:00:00.000Z'),
+      buildVote(first.id, artwork.id, 'yes', 'Strong piece', '2026-05-22T09:00:00.000Z'),
     )
 
     expect(state[artwork.id]).toMatchObject({
-      counts: { yes: 8, maybe: 3, no: 2 },
+      value: 'yes',
       notes: 'Strong piece',
     })
     expect(getReviewProgress(mockSubmissions, state)).toMatchObject({

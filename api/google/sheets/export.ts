@@ -1,11 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { requireSession } from '../../_lib/session'
 import { buildSheetPayload } from '../../../src/lib/sheetsExport'
-import type { ArtistSubmission, ReviewState } from '../../../src/types'
+import type { ArtistSubmission } from '../../../src/types'
 
 type ExportRequest = {
   submissions?: ArtistSubmission[]
-  votes?: ReviewState
 }
 
 const SHEET_TITLE = 'RMS Review Votes'
@@ -77,8 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const body = req.body as ExportRequest
   const submissions = body.submissions ?? []
-  const votes = body.votes ?? {}
-  const payload = buildSheetPayload(submissions, votes)
+  const payload = buildSheetPayload(submissions)
 
   try {
     const { spreadsheetId, spreadsheetUrl } = await ensureSpreadsheet(session.accessToken)

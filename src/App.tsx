@@ -16,8 +16,8 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { mockSubmissions } from './data/mockSubmissions'
-import { exportVotes, fetchCurrentUser, fetchLiveSubmissions } from './lib/apiClient'
-import { buildVote, emptyVoteCounts, getReviewProgress, upsertVote } from './lib/reviewState'
+import { exportVotes, fetchCurrentUser, fetchLiveSubmissions, submitVotesToJotform } from './lib/apiClient'
+import { buildVote, getReviewProgress, upsertVote } from './lib/reviewState'
 import type { ArtistSubmission, ReviewState, SyncState, VoteCounts } from './types'
 
 const voteOptions: Array<{
@@ -105,17 +105,15 @@ function App() {
   }
 
   const selectedVoteKey = selectedVote
-    ? voteOptions.find((option) => selectedVote.counts[option.key] > 0)?.key
+    ? selectedVote.value
     : undefined
 
   const setVote = (key: keyof VoteCounts) => {
     if (!selectedArtwork || !selectedSubmission) return
-    const counts = emptyVoteCounts()
-    counts[key] = 1
     const nextVote = buildVote(
       selectedSubmission.id,
       selectedArtwork.id,
-      counts,
+      key,
       selectedVote?.notes ?? '',
     )
     setReviewState((state) => upsertVote(state, nextVote))
@@ -127,7 +125,7 @@ function App() {
     const nextVote = buildVote(
       selectedSubmission.id,
       selectedArtwork.id,
-      selectedVote?.counts ?? emptyVoteCounts(),
+      selectedVote?.value ?? 'maybe',
       notes,
     )
     setReviewState((state) => upsertVote(state, nextVote))
@@ -166,9 +164,14 @@ function App() {
 
   const handleExport = async () => {
     setExportState('Exporting to Google Sheet')
-    setExportDialog({ status: 'working', message: 'Exporting votes to Google Sheets...' })
+    setExportDialog({ status: 'working', message: 'Pulling latest Jotform data, then exporting to Google Sheets...' })
     try {
-      const result = await exportVotes(submissions, reviewState)
+      const latestSubmissions = demoMode ? submissions : (await fetchLiveSubmissions()).submissions
+      if (!demoMode) {
+        setSubmissions(latestSubmissions)
+        if (latestSubmissions[0]) selectSubmission(latestSubmissions[0])
+      }
+      const result = await exportVotes(latestSubmissions, {})
       setExportState(`Exported ${result.updatedRows} rows`)
       setExportDialog({
         status: 'success',
@@ -177,6 +180,27 @@ function App() {
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Google Sheet export failed'
+      setExportState(message)
+      setExportDialog({ status: 'error', message })
+    }
+  }
+
+  const handleSubmitVotes = async () => {
+    setExportState('Submitting votes to Jotform')
+    setExportDialog({ status: 'working', message: 'Submitting your votes to Jotform...' })
+    try {
+      const result = await submitVotesToJotform(submissions, reviewState)
+      const latestSubmissions = demoMode ? submissions : (await fetchLiveSubmissions()).submissions
+      if (!demoMode) setSubmissions(latestSubmissions)
+      setReviewState({})
+      setExportState(`Submitted votes for ${result.updatedSubmissions} submissions`)
+      setExportDialog({
+        status: 'success',
+        message: `Submitted your votes to ${result.updatedSubmissions} Jotform submissions, then refreshed the UI.`,
+        spreadsheetUrl: 'https://eu.jotform.com/tables/233391657291361',
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Jotform vote submit failed'
       setExportState(message)
       setExportDialog({ status: 'error', message })
     }
@@ -230,6 +254,10 @@ function App() {
             <RotateCw size={16} aria-hidden="true" />
             Pull from Jotform
           </button>
+          <button type="button" className="secondary-button" onClick={handleSubmitVotes}>
+            <Check size={16} aria-hidden="true" />
+            Submit to Jotform
+          </button>
           <button type="button" className="primary-button" onClick={handleExport}>
             <Download size={16} aria-hidden="true" />
             Export to Google Sheet
@@ -275,7 +303,7 @@ function App() {
             {filteredSubmissions.map((submission) => {
               const reviewed = submission.artworks.filter((artwork) => {
                 const vote = reviewState[artwork.id]
-                return vote ? vote.counts.yes + vote.counts.maybe + vote.counts.no > 0 : false
+                return Boolean(vote?.value)
               }).length
               return (
                 <button
@@ -365,6 +393,12 @@ function App() {
               })}
             </div>
             <p className="vote-hint">Your vote is exported as one vote in the matching Yes, Maybe, or No total.</p>
+            <div className="council-totals" aria-label="Current council totals from Jotform">
+              <span>Current Jotform totals</span>
+              <strong>Y {selectedArtwork.voteCounts.yes}</strong>
+              <strong>M {selectedArtwork.voteCounts.maybe}</strong>
+              <strong>N {selectedArtwork.voteCounts.no}</strong>
+            </div>
             <label className="notes-field">
               Notes
               <textarea
@@ -440,7 +474,7 @@ function App() {
             </p>
             {exportDialog.status === 'success' ? (
               <a className="primary-button dialog-link" href={exportDialog.spreadsheetUrl} target="_blank" rel="noreferrer">
-                Open Google Sheet
+                {exportDialog.spreadsheetUrl.includes('jotform') ? 'Open Jotform' : 'Open Google Sheet'}
               </a>
             ) : null}
           </section>

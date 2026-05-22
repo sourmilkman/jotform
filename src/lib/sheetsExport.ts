@@ -1,4 +1,4 @@
-import type { ArtistSubmission, ReviewState } from '../types'
+import type { ArtistSubmission, VoteCounts } from '../types'
 
 const MAX_ARTWORKS = 6
 
@@ -17,10 +17,10 @@ export const SHEET_HEADERS = [
   }).flat(),
 ]
 
-export const formatVoteCounts = (vote = { counts: { yes: 0, maybe: 0, no: 0 } }) =>
-  `Yes: ${vote.counts.yes}; Maybe: ${vote.counts.maybe}; No: ${vote.counts.no}`
+export const formatVoteCounts = (counts: VoteCounts) =>
+  `Yes: ${counts.yes}; Maybe: ${counts.maybe}; No: ${counts.no}`
 
-export const buildSheetRows = (submissions: ArtistSubmission[], votes: ReviewState) =>
+export const buildSheetRows = (submissions: ArtistSubmission[]) =>
   submissions.map((submission) => {
     const artworkColumns = Array.from({ length: MAX_ARTWORKS }, (_, index) => {
       const artworkNumber = index + 1
@@ -31,7 +31,7 @@ export const buildSheetRows = (submissions: ArtistSubmission[], votes: ReviewSta
         artwork.imageUrl,
         artwork.title,
         artwork.medium,
-        formatVoteCounts(votes[artwork.id]),
+        formatVoteCounts(artwork.voteCounts),
       ]
     }).flat()
 
@@ -43,7 +43,7 @@ export const buildSheetRows = (submissions: ArtistSubmission[], votes: ReviewSta
     ]
   })
 
-export const buildSheetPayload = (submissions: ArtistSubmission[], votes: ReviewState) => ({
+export const buildSheetPayload = (submissions: ArtistSubmission[]) => ({
   headers: SHEET_HEADERS,
-  rows: buildSheetRows(submissions, votes),
+  rows: buildSheetRows(submissions),
 })

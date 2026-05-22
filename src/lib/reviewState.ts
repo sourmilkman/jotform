@@ -11,13 +11,13 @@ export const getVoteTotal = (counts: VoteCounts) => counts.yes + counts.maybe + 
 export const buildVote = (
   submissionId: string,
   artworkId: string,
-  counts: VoteCounts = emptyVoteCounts(),
+  value: keyof VoteCounts,
   notes = '',
   updatedAt = new Date().toISOString(),
 ): ArtworkVote => ({
   submissionId,
   artworkId,
-  counts,
+  value,
   notes,
   updatedAt,
 })
@@ -37,7 +37,7 @@ export const getReviewProgress = (submissions: ArtistSubmission[], votes: Review
       count +
       submission.artworks.filter((artwork) => {
         const vote = votes[artwork.id]
-        return vote ? getVoteTotal(vote.counts) > 0 : false
+        return Boolean(vote?.value)
       }).length,
     0,
   )

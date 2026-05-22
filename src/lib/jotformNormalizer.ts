@@ -1,4 +1,4 @@
-import type { ArtistSubmission, Artwork } from '../types'
+import type { ArtistSubmission, Artwork, VoteCounts } from '../types'
 
 type JotformAnswer = {
   name?: string
@@ -60,15 +60,38 @@ const getImageUrl = (answer: JotformAnswer | undefined): string => {
   return ''
 }
 
+export const parseVoteCounts = (value: string): VoteCounts => {
+  const lower = value.toLowerCase()
+  const findCount = (label: 'yes' | 'maybe' | 'no') => {
+    const match = lower.match(new RegExp(`${label}\\s*:?\\s*(\\d+)`))
+    return match ? Number(match[1]) : 0
+  }
+
+  return {
+    yes: findCount('yes'),
+    maybe: findCount('maybe'),
+    no: findCount('no'),
+  }
+}
+
+export const formatVoteCountsForJotform = (counts: VoteCounts) =>
+  `Yes: ${counts.yes}; Maybe: ${counts.maybe}; No: ${counts.no}`
+
+export const addVoteToCounts = (counts: VoteCounts, vote?: keyof VoteCounts): VoteCounts => ({
+  ...counts,
+  ...(vote ? { [vote]: counts[vote] + 1 } : {}),
+})
+
 const findArtworkField = (
   answers: Record<string, JotformAnswer>,
   artworkNumber: number,
-  kind: 'image' | 'title' | 'medium',
+  kind: 'image' | 'title' | 'medium' | 'votes',
 ) => {
   const synonyms = {
     image: ['artwork', 'file', 'attachment', 'image', 'upload'],
     title: ['title'],
     medium: ['medium'],
+    votes: ['votes', 'vote'],
   }[kind]
 
   return Object.values(answers).find((answer) => {
@@ -107,6 +130,9 @@ export const normalizeJotformSubmissions = (
         title,
         medium,
         imageUrl,
+        voteCounts: parseVoteCounts(
+          valueToString(findArtworkField(answers, artworkNumber, 'votes')?.answer),
+        ),
         ...(fileName ? { fileName } : {}),
       }
     }).filter((artwork): artwork is Artwork => artwork !== null)
