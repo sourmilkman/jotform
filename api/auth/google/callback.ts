@@ -1,5 +1,5 @@
+import { createHmac } from 'node:crypto'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { setSessionCookie } from '../../_lib/session'
 
 type TokenResponse = {
   access_token: string
@@ -15,6 +15,33 @@ type GoogleUser = {
 type GoogleError = {
   error?: string
   error_description?: string
+}
+
+const encodeSession = (session: {
+  email: string
+  accessToken: string
+  refreshToken?: string
+  expiresAt: number
+}) => {
+  const payload = Buffer.from(JSON.stringify(session)).toString('base64url')
+  const secret = process.env.GOOGLE_CLIENT_SECRET ?? 'dev-only-secret'
+  const signature = createHmac('sha256', secret).update(payload).digest('base64url')
+  return `${payload}.${signature}`
+}
+
+const setSessionCookie = (
+  res: VercelResponse,
+  session: {
+    email: string
+    accessToken: string
+    refreshToken?: string
+    expiresAt: number
+  },
+) => {
+  res.setHeader(
+    'Set-Cookie',
+    `rms_review_session=${encodeSession(session)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
+  )
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
