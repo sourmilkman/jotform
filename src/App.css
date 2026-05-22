@@ -430,55 +430,32 @@ button {
   margin: 0;
 }
 
-.vote-count-grid {
+.vote-grid {
   display: grid;
   gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
 }
 
-.vote-count-row {
+.vote-button {
   align-items: center;
   background: #f8faf8;
   border: 1px solid #cfdcd6;
   border-radius: 8px;
   color: #193b37;
-  display: flex;
-  font-size: 14px;
+  display: inline-flex;
+  flex-direction: column;
+  font-size: 13px;
   font-weight: 800;
-  justify-content: space-between;
-  min-height: 52px;
-  padding: 8px 10px;
-}
-
-.vote-count-row div {
-  align-items: center;
-  display: inline-flex;
-  gap: 8px;
-}
-
-.vote-count-row button {
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid #cfdcd6;
-  border-radius: 6px;
-  color: #193b37;
-  display: inline-flex;
-  font-size: 18px;
-  font-weight: 900;
-  height: 32px;
+  gap: 6px;
   justify-content: center;
-  line-height: 1;
-  width: 32px;
+  min-height: 70px;
+  padding: 8px;
 }
 
-.vote-count-row output {
+.vote-button.active {
   background: #0e4b43;
-  border-radius: 6px;
+  border-color: #0e4b43;
   color: #ffffff;
-  display: inline-flex;
-  font-weight: 900;
-  justify-content: center;
-  min-width: 34px;
-  padding: 5px 8px;
 }
 
 .vote-hint {

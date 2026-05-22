@@ -8,6 +8,9 @@ import {
   RotateCw,
   Search,
   ShieldCheck,
+  Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -17,13 +20,14 @@ import { exportVotes, fetchCurrentUser, fetchLiveSubmissions } from './lib/apiCl
 import { buildVote, emptyVoteCounts, getReviewProgress, upsertVote } from './lib/reviewState'
 import type { ArtistSubmission, ReviewState, SyncState, VoteCounts } from './types'
 
-const voteCountOptions: Array<{
+const voteOptions: Array<{
   key: keyof VoteCounts
   label: string
+  icon: typeof ThumbsUp
 }> = [
-  { key: 'yes', label: 'Yes' },
-  { key: 'maybe', label: 'Maybe' },
-  { key: 'no', label: 'No' },
+  { key: 'yes', label: 'Yes', icon: ThumbsUp },
+  { key: 'maybe', label: 'Maybe', icon: Sparkles },
+  { key: 'no', label: 'No', icon: ThumbsDown },
 ]
 
 const formatDate = (value: string) =>
@@ -100,16 +104,18 @@ function App() {
     setSelectedArtworkId(selectedSubmission.artworks[nextIndex].id)
   }
 
-  const setVoteCount = (key: keyof VoteCounts, nextValue: number) => {
+  const selectedVoteKey = selectedVote
+    ? voteOptions.find((option) => selectedVote.counts[option.key] > 0)?.key
+    : undefined
+
+  const setVote = (key: keyof VoteCounts) => {
     if (!selectedArtwork || !selectedSubmission) return
-    const currentCounts = selectedVote?.counts ?? emptyVoteCounts()
+    const counts = emptyVoteCounts()
+    counts[key] = 1
     const nextVote = buildVote(
       selectedSubmission.id,
       selectedArtwork.id,
-      {
-        ...currentCounts,
-        [key]: Math.max(0, Math.min(13, nextValue)),
-      },
+      counts,
       selectedVote?.notes ?? '',
     )
     setReviewState((state) => upsertVote(state, nextVote))
@@ -342,34 +348,23 @@ function App() {
               <ShieldCheck size={18} aria-hidden="true" />
               <h2>Artwork vote</h2>
             </div>
-            <div className="vote-count-grid">
-              {voteCountOptions.map((option) => {
-                const count = selectedVote?.counts[option.key] ?? 0
+            <div className="vote-grid">
+              {voteOptions.map((option) => {
+                const Icon = option.icon
                 return (
-                  <div className="vote-count-row" key={option.key}>
-                    <span>{option.label}</span>
-                    <div>
-                      <button
-                        type="button"
-                        aria-label={`Decrease ${option.label} votes`}
-                        onClick={() => setVoteCount(option.key, count - 1)}
-                      >
-                        -
-                      </button>
-                      <output aria-label={`${option.label} votes`}>{count}</output>
-                      <button
-                        type="button"
-                        aria-label={`Increase ${option.label} votes`}
-                        onClick={() => setVoteCount(option.key, count + 1)}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    key={option.key}
+                    className={selectedVoteKey === option.key ? 'vote-button active' : 'vote-button'}
+                    onClick={() => setVote(option.key)}
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                    {option.label}
+                  </button>
                 )
               })}
             </div>
-            <p className="vote-hint">Enter aggregate council totals. Counts are capped at 13.</p>
+            <p className="vote-hint">Your vote is exported as one vote in the matching Yes, Maybe, or No total.</p>
             <label className="notes-field">
               Notes
               <textarea
