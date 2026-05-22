@@ -117,26 +117,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  let fieldMap: FieldMap
-  try {
-    fieldMap = await fetchVoteFieldMap(apiKey)
-  } catch (error) {
-    res.status(500).json({
-      message: error instanceof Error ? error.message : 'Could not map Jotform vote fields.',
-    })
-    return
+  const body = req.body as VoteRequest
+  const submissions = body.submissions ?? []
+  const votes = body.votes ?? {}
+  const fieldMapFromSubmissions = Object.fromEntries(
+    submissions
+      .flatMap((submission) => submission.artworks)
+      .filter((artwork) => artwork.jotformVoteFieldId)
+      .map((artwork) => [String(artwork.artworkNumber), artwork.jotformVoteFieldId as string]),
+  )
+  let fieldMap: FieldMap = fieldMapFromSubmissions
+
+  if (Object.keys(fieldMap).length === 0) {
+    try {
+      fieldMap = await fetchVoteFieldMap(apiKey)
+    } catch (error) {
+      res.status(500).json({
+        message: error instanceof Error ? error.message : 'Could not map Jotform vote fields.',
+      })
+      return
+    }
   }
 
   if (Object.keys(fieldMap).length === 0) {
     res.status(500).json({
-      message: 'Could not find Jotform vote fields. Make sure the form has fields named like "Votes - Artwork 1" through "Votes - Artwork 6".',
+      message: 'Could not find Jotform vote fields. Pull from Jotform first so the app can read the vote field IDs.',
     })
     return
   }
-
-  const body = req.body as VoteRequest
-  const submissions = body.submissions ?? []
-  const votes = body.votes ?? {}
   let updatedSubmissions = 0
 
   for (const submission of submissions.filter((item) => item.source === 'jotform')) {
