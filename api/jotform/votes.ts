@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   addVoteToCounts,
-  formatVoteCountsForJotform,
-} from '../../src/lib/jotformNormalizer'
-import type { ArtistSubmission, ReviewState } from '../../src/types'
+  formatVoteCounts,
+  type ArtistSubmission,
+  type ReviewState,
+} from '../_lib/common'
 
 type VoteRequest = {
   submissions?: ArtistSubmission[]
@@ -68,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!vote || !fieldId) continue
 
       const updatedCounts = addVoteToCounts(artwork.voteCounts, vote.value)
-      params.set(`submission[${fieldId}]`, formatVoteCountsForJotform(updatedCounts))
+      params.set(`submission[${fieldId}]`, formatVoteCounts(updatedCounts))
     }
 
     if (params.size === 0) continue

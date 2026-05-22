@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSession } from '../_lib/session'
+import { getSession } from '../_lib/common'
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   const session = getSession(req)

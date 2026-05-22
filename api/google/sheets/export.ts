@@ -1,7 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { requireSession } from '../../_lib/session'
-import { buildSheetPayload } from '../../../src/lib/sheetsExport'
-import type { ArtistSubmission } from '../../../src/types'
+import { buildSheetPayload, requireSession, type ArtistSubmission } from '../../_lib/common'
 
 type ExportRequest = {
   submissions?: ArtistSubmission[]
