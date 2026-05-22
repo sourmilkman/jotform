@@ -59,7 +59,7 @@ function App() {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(mockSubmissions[0]?.id ?? '')
   const [selectedArtworkId, setSelectedArtworkId] = useState(mockSubmissions[0]?.artworks[0]?.id ?? '')
   const [query, setQuery] = useState('')
-  const [demoMode, setDemoMode] = useState(true)
+  const [demoMode, setDemoMode] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [lastSheetUrl, setLastSheetUrl] = useState<string | null>(() =>
     window.localStorage.getItem(LAST_SHEET_URL_KEY),
@@ -68,7 +68,7 @@ function App() {
   const [exportDialog, setExportDialog] = useState<ExportDialog>({ status: 'idle' })
   const [syncState, setSyncState] = useState<SyncState>({
     status: 'ready',
-    message: 'Demo submissions loaded',
+    message: 'Ready to pull from Jotform',
     syncedAt: new Date().toISOString(),
   })
   const [exportState, setExportState] = useState('Ready to export')
