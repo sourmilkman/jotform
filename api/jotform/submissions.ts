@@ -18,7 +18,7 @@ type JotformListResponse = {
   message?: string
 }
 
-const FORM_ID = '233391657291361'
+const DEFAULT_FORM_ID = '233391657291361'
 const DEFAULT_SYNC_LIMIT = 250
 const MAX_SYNC_LIMIT = 1000
 const JOTFORM_TIMEOUT_MS = 18000
@@ -46,7 +46,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       orderby: 'created_at',
     })
     const response = await fetch(
-      `https://eu-api.jotform.com/form/${FORM_ID}/submissions?${params.toString()}`,
+      `https://eu-api.jotform.com/form/${process.env.JOTFORM_FORM_ID ?? DEFAULT_FORM_ID}/submissions?${params.toString()}`,
       {
         headers: { APIKEY: apiKey },
         signal: controller.signal,

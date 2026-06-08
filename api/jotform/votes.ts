@@ -44,7 +44,7 @@ const readVoteFieldMap = (): FieldMap => {
   )
 }
 
-const FORM_ID = '233391657291361'
+const DEFAULT_FORM_ID = '233391657291361'
 
 const addVoteToCounts = (counts: VoteCounts, vote?: keyof VoteCounts): VoteCounts => ({
   ...counts,
@@ -123,5 +123,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     updatedSubmissions += 1
   }
 
-  res.status(200).json({ formId: FORM_ID, updatedSubmissions })
+  res.status(200).json({ formId: process.env.JOTFORM_FORM_ID ?? DEFAULT_FORM_ID, updatedSubmissions })
 }
