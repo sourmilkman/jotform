@@ -1,5 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { normalizeJotformSubmissions, type JotformSubmission } from '../../src/lib/jotformNormalizer'
+
+type JotformAnswer = {
+  name?: string
+  text?: string
+  answer?: unknown
+  prettyFormat?: string
+}
+
+type JotformSubmission = {
+  id: string
+  created_at?: string
+  answers?: Record<string, JotformAnswer>
+}
 
 type JotformListResponse = {
   content?: JotformSubmission[]
@@ -40,15 +52,27 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
         signal: controller.signal,
       },
     )
-    const payload = (await response.json()) as JotformListResponse
+    const responseText = await response.text()
+    const payload = responseText
+      ? JSON.parse(responseText) as JotformListResponse
+      : {}
 
     if (!response.ok) {
       res.status(response.status).json({ message: payload.message ?? 'Jotform sync failed.' })
       return
     }
 
+    if (!Array.isArray(payload.content)) {
+      res.status(502).json({
+        message: 'Jotform returned an unexpected response. No submissions array was available.',
+      })
+      return
+    }
+
+    const { normalizeJotformSubmissions } = await import('../../src/lib/jotformNormalizer')
+
     res.setHeader('Cache-Control', 'no-store')
-    res.status(200).json({ submissions: normalizeJotformSubmissions(payload.content ?? []) })
+    res.status(200).json({ submissions: normalizeJotformSubmissions(payload.content) })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       res.status(504).json({ message: 'Jotform sync timed out after 18 seconds. Try again or lower JOTFORM_SYNC_LIMIT.' })

@@ -22,13 +22,21 @@ const fetchWithTimeout = async (url: string, init: RequestInit = {}, timeoutMs =
 }
 
 const readJson = async <T>(response: Response): Promise<T> => {
+  const text = await response.text()
+  const payload = text
+    ? (() => {
+        try {
+          return JSON.parse(text) as { message?: string }
+        } catch {
+          return { message: text }
+        }
+      })()
+    : {}
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: response.statusText })) as {
-      message?: string
-    }
-    throw new Error(error.message ?? response.statusText)
+    throw new Error(payload.message ?? response.statusText)
   }
-  return response.json() as Promise<T>
+  return payload as T
 }
 
 export const fetchLiveSubmissions = async () =>

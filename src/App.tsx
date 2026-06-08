@@ -56,9 +56,9 @@ const readCookie = (name: string) =>
 
 type ExportDialog =
   | { status: 'idle' }
-  | { status: 'working'; message: string }
-  | { status: 'success'; message: string; spreadsheetUrl: string }
-  | { status: 'error'; message: string }
+  | { status: 'working'; title?: string; message: string }
+  | { status: 'success'; title?: string; message: string; spreadsheetUrl?: string }
+  | { status: 'error'; title?: string; message: string }
 
 function App() {
   const [submissions, setSubmissions] = useState<ArtistSubmission[]>([])
@@ -186,6 +186,11 @@ function App() {
     setSelectedSubmissionId('')
     setSelectedArtworkId('')
     setSyncState({ status: 'syncing', message: 'Pulling Jotform submissions' })
+    setExportDialog({
+      status: 'working',
+      title: 'Pulling from Jotform',
+      message: 'Fetching the latest artist submissions from Jotform...',
+    })
     try {
       const result = await fetchLiveSubmissions()
       const artworkCount = result.submissions.reduce(
@@ -203,10 +208,25 @@ function App() {
             : `${result.submissions.length} live submissions found, but no artwork attachments were recognized`,
         syncedAt: new Date().toISOString(),
       })
+      setExportDialog({
+        status: 'success',
+        title: 'Jotform pull complete',
+        message:
+          artworkCount > 0
+            ? `Loaded ${result.submissions.length} live submissions and ${artworkCount} artworks.`
+            : `Found ${result.submissions.length} live submissions, but no artwork attachments were recognized. The Jotform field mapping needs updating.`,
+        spreadsheetUrl: 'https://eu.jotform.com/tables/233391657291361',
+      })
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not sync Jotform'
       setSyncState({
         status: 'error',
-        message: error instanceof Error ? error.message : 'Could not sync Jotform',
+        message,
+      })
+      setExportDialog({
+        status: 'error',
+        title: 'Jotform pull failed',
+        message,
       })
     }
   }
@@ -568,16 +588,17 @@ function App() {
               {exportDialog.status === 'error' ? <X size={24} aria-hidden="true" /> : null}
             </div>
             <h2 id="export-dialog-title">
-              {exportDialog.status === 'working'
-                ? 'Exporting'
+              {exportDialog.title ??
+                (exportDialog.status === 'working'
+                ? 'Working'
                 : exportDialog.status === 'success'
-                  ? 'Export complete'
-                  : 'Export failed'}
+                  ? 'Complete'
+                  : 'Action failed')}
             </h2>
             <p className={exportDialog.status === 'error' ? 'dialog-error-message' : undefined}>
               {exportDialog.message || 'No error details were returned. Please try again.'}
             </p>
-            {exportDialog.status === 'success' ? (
+            {exportDialog.status === 'success' && exportDialog.spreadsheetUrl ? (
               <a className="primary-button dialog-link" href={exportDialog.spreadsheetUrl} target="_blank" rel="noreferrer">
                 {exportDialog.spreadsheetUrl.includes('jotform') ? 'Open Jotform' : 'Open Google Sheet'}
               </a>
