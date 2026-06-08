@@ -82,6 +82,7 @@ function App() {
     syncedAt: new Date().toISOString(),
   })
   const [exportState, setExportState] = useState('Ready to export')
+  const isSyncing = syncState.status === 'syncing'
 
   const filteredSubmissions = useMemo(() => {
     const trimmed = query.toLowerCase().trim()
@@ -181,15 +182,25 @@ function App() {
 
   const handleSync = async () => {
     setDemoMode(false)
+    setSubmissions([])
+    setSelectedSubmissionId('')
+    setSelectedArtworkId('')
     setSyncState({ status: 'syncing', message: 'Pulling Jotform submissions' })
     try {
       const result = await fetchLiveSubmissions()
+      const artworkCount = result.submissions.reduce(
+        (total, submission) => total + submission.artworks.length,
+        0,
+      )
       setSubmissions(result.submissions)
       setReviewState({})
       if (result.submissions[0]) selectSubmission(result.submissions[0])
       setSyncState({
         status: 'ready',
-        message: `${result.submissions.length} live submissions loaded`,
+        message:
+          artworkCount > 0
+            ? `${result.submissions.length} live submissions loaded`
+            : `${result.submissions.length} live submissions found, but no artwork attachments were recognized`,
         syncedAt: new Date().toISOString(),
       })
     } catch (error) {
@@ -270,9 +281,23 @@ function App() {
         <ImageIcon aria-hidden="true" />
         <h1>No submissions yet</h1>
         <p>Pull live entries from Jotform, or load demo data when you want to test the voting flow.</p>
+        <div className="empty-sync-status" role="status" aria-live="polite">
+          <div className={`status-dot ${syncState.status}`} />
+          <div>
+            <strong>{syncState.message}</strong>
+            <span>{syncState.syncedAt ? `Last update ${formatDate(syncState.syncedAt)}` : 'Waiting for Jotform'}</span>
+          </div>
+        </div>
         <div className="empty-actions">
-          <button type="button" onClick={handleSync}>
-            Pull from Jotform
+          <button type="button" onClick={handleSync} disabled={isSyncing}>
+            {isSyncing ? (
+              <>
+                <RotateCw size={16} aria-hidden="true" />
+                Pulling from Jotform
+              </>
+            ) : (
+              'Pull from Jotform'
+            )}
           </button>
           <button type="button" className="demo-data-button" onClick={handleLoadDemo}>
             <Sparkles size={16} aria-hidden="true" />
@@ -319,9 +344,9 @@ function App() {
               {isCheckingSession ? 'Checking sign-in' : 'Sign in with Google'}
             </a>
           )}
-          <button type="button" className="secondary-button" onClick={handleSync}>
+          <button type="button" className="secondary-button" onClick={handleSync} disabled={isSyncing}>
             <RotateCw size={16} aria-hidden="true" />
-            Pull from Jotform
+            {isSyncing ? 'Pulling' : 'Pull from Jotform'}
           </button>
           <button type="button" className="secondary-button" onClick={handleSubmitVotes}>
             <Check size={16} aria-hidden="true" />
