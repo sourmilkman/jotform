@@ -1,4 +1,4 @@
-import type { ArtistSubmission, ArtworkVote, ReviewState, VoteCounts } from '../types'
+import type { ArtistSubmission, ArtworkVote, ReviewState, VoteCounts } from '../types.js'
 
 export const emptyVoteCounts = (): VoteCounts => ({
   yes: 0,

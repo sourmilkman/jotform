@@ -1,4 +1,4 @@
-import type { ArtistSubmission, Artwork, VoteCounts } from '../types'
+import type { ArtistSubmission, Artwork, VoteCounts } from '../types.js'
 
 type JotformAnswer = {
   name?: string

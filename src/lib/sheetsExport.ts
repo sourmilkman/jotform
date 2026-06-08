@@ -1,4 +1,4 @@
-import type { ArtistSubmission, VoteCounts } from '../types'
+import type { ArtistSubmission, VoteCounts } from '../types.js'
 
 const MAX_ARTWORKS = 6
 

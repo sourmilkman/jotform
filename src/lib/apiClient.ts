@@ -1,4 +1,4 @@
-import type { ArtistSubmission, ReviewState } from '../types'
+import type { ArtistSubmission, ReviewState } from '../types.js'
 
 const fetchWithTimeout = async (url: string, init: RequestInit = {}, timeoutMs = 20000) => {
   const controller = new AbortController()

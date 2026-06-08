@@ -69,7 +69,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       return
     }
 
-    const { normalizeJotformSubmissions } = await import('../../src/lib/jotformNormalizer')
+    const { normalizeJotformSubmissions } = await import('../../src/lib/jotformNormalizer.js')
 
     res.setHeader('Cache-Control', 'no-store')
     res.status(200).json({ submissions: normalizeJotformSubmissions(payload.content) })
