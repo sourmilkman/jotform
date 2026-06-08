@@ -123,14 +123,38 @@ button {
   white-space: nowrap;
 }
 
-.mode-toggle {
+.data-source-pill {
   align-items: center;
+  background: #eef5f1;
+  border: 1px solid #c9d8d2;
+  border-radius: 999px;
   color: #334642;
   display: inline-flex;
   font-size: 14px;
   font-weight: 700;
   gap: 8px;
   min-height: 38px;
+  padding: 0 12px;
+}
+
+.data-source-pill.demo {
+  background: #fff8e8;
+  border-color: #e6c77d;
+  color: #6b4a00;
+}
+
+.demo-data-button {
+  align-items: center;
+  background: #fff8e8;
+  border: 1px solid #e6c77d;
+  border-radius: 6px;
+  color: #5f4200;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
 }
 
 .workspace {
@@ -566,6 +590,19 @@ button {
   padding: 0 14px;
 }
 
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.empty-state .demo-data-button {
+  background: #fff8e8;
+  border: 1px solid #e6c77d;
+  color: #5f4200;
+}
+
 .dialog-backdrop {
   align-items: center;
   background: rgba(18, 31, 28, 0.48);
@@ -695,7 +732,9 @@ button {
   .secondary-button,
   .signin-link,
   .sheet-link,
-  .signed-in-pill {
+  .signed-in-pill,
+  .demo-data-button,
+  .data-source-pill {
     flex: 1 1 180px;
     justify-content: center;
   }

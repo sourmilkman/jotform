@@ -61,10 +61,10 @@ type ExportDialog =
   | { status: 'error'; message: string }
 
 function App() {
-  const [submissions, setSubmissions] = useState<ArtistSubmission[]>(mockSubmissions)
+  const [submissions, setSubmissions] = useState<ArtistSubmission[]>([])
   const [reviewState, setReviewState] = useState<ReviewState>({})
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState(mockSubmissions[0]?.id ?? '')
-  const [selectedArtworkId, setSelectedArtworkId] = useState(mockSubmissions[0]?.artworks[0]?.id ?? '')
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
+  const [selectedArtworkId, setSelectedArtworkId] = useState('')
   const [query, setQuery] = useState('')
   const [demoMode, setDemoMode] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(() => {
@@ -180,21 +180,12 @@ function App() {
   }
 
   const handleSync = async () => {
-    if (demoMode) {
-      setSubmissions(mockSubmissions)
-      selectSubmission(mockSubmissions[0])
-      setSyncState({
-        status: 'ready',
-        message: 'Demo submissions refreshed',
-        syncedAt: new Date().toISOString(),
-      })
-      return
-    }
-
+    setDemoMode(false)
     setSyncState({ status: 'syncing', message: 'Pulling Jotform submissions' })
     try {
       const result = await fetchLiveSubmissions()
       setSubmissions(result.submissions)
+      setReviewState({})
       if (result.submissions[0]) selectSubmission(result.submissions[0])
       setSyncState({
         status: 'ready',
@@ -207,6 +198,19 @@ function App() {
         message: error instanceof Error ? error.message : 'Could not sync Jotform',
       })
     }
+  }
+
+  const handleLoadDemo = () => {
+    setDemoMode(true)
+    setSubmissions(mockSubmissions)
+    setReviewState({})
+    if (mockSubmissions[0]) selectSubmission(mockSubmissions[0])
+    setSyncState({
+      status: 'ready',
+      message: `${mockSubmissions.length} demo artists loaded`,
+      syncedAt: new Date().toISOString(),
+    })
+    setExportState('Demo data loaded')
   }
 
   const handleExport = async () => {
@@ -265,10 +269,16 @@ function App() {
       <main className="empty-state">
         <ImageIcon aria-hidden="true" />
         <h1>No submissions yet</h1>
-        <p>Use demo mode now, then sync Jotform after the first RMS entry arrives.</p>
-        <button type="button" onClick={handleSync}>
-          Load demo submissions
-        </button>
+        <p>Pull live entries from Jotform, or load demo data when you want to test the voting flow.</p>
+        <div className="empty-actions">
+          <button type="button" onClick={handleSync}>
+            Pull from Jotform
+          </button>
+          <button type="button" className="demo-data-button" onClick={handleLoadDemo}>
+            <Sparkles size={16} aria-hidden="true" />
+            Load demo data
+          </button>
+        </div>
       </main>
     )
   }
@@ -286,14 +296,13 @@ function App() {
           </div>
         </div>
         <div className="topbar-actions" aria-label="Review actions">
-          <label className="mode-toggle">
-            <input
-              type="checkbox"
-              checked={demoMode}
-              onChange={(event) => setDemoMode(event.target.checked)}
-            />
-            Demo data
-          </label>
+          <span className={demoMode ? 'data-source-pill demo' : 'data-source-pill'}>
+            {demoMode ? 'Demo data loaded' : 'Live Jotform data'}
+          </span>
+          <button type="button" className="demo-data-button" onClick={handleLoadDemo}>
+            <Sparkles size={16} aria-hidden="true" />
+            Load demo data
+          </button>
           {userEmail ? (
             <>
               <span className="signed-in-pill" title={`Signed in as ${userEmail}`}>
