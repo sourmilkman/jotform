@@ -9,6 +9,13 @@ export type JotformFormSummary = {
   updatedAt: string
 }
 
+export type JotformFormsDiagnostic = {
+  baseUrl: string
+  status: number
+  formCount?: number
+  message?: string
+}
+
 const fetchWithTimeout = async (url: string, init: RequestInit = {}, timeoutMs = 20000) => {
   const controller = new AbortController()
   const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs)
@@ -52,7 +59,11 @@ export const fetchLiveSubmissions = async () =>
   readJson<{ submissions: ArtistSubmission[] }>(await fetchWithTimeout('/api/jotform/submissions'))
 
 export const fetchJotformForms = async () =>
-  readJson<{ forms: JotformFormSummary[] }>(await fetchWithTimeout('/api/jotform/forms'))
+  readJson<{
+    baseUrl?: string
+    diagnostics?: JotformFormsDiagnostic[]
+    forms: JotformFormSummary[]
+  }>(await fetchWithTimeout('/api/jotform/forms'))
 
 export const exportVotes = async (submissions: ArtistSubmission[], votes: ReviewState) =>
   readJson<{ spreadsheetId: string; spreadsheetUrl: string; updatedRows: number }>(

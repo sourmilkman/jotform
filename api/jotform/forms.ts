@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { fetchFromJotformBases } from '../_lib/jotform.js'
 
 type JotformForm = {
   id?: string
@@ -14,17 +15,6 @@ type JotformFormsResponse = {
   message?: string
 }
 
-const readJotformJson = async (response: Response): Promise<JotformFormsResponse> => {
-  const text = await response.text()
-  if (!text) return {}
-
-  try {
-    return JSON.parse(text) as JotformFormsResponse
-  } catch {
-    return { message: text }
-  }
-}
-
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.JOTFORM_API_KEY
   if (!apiKey) {
@@ -32,19 +22,35 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     return
   }
 
-  const response = await fetch('https://eu-api.jotform.com/user/forms?limit=1000', {
-    headers: { APIKEY: apiKey },
-  })
-  const payload = await readJotformJson(response)
+  const results = await fetchFromJotformBases<JotformFormsResponse>('/user/forms?limit=1000', apiKey)
+  const successfulResults = results.filter((result) => result.ok)
+  const bestResult =
+    successfulResults.find((result) => (result.payload.content ?? []).length > 0) ??
+    successfulResults[0] ??
+    results[0]
 
-  if (!response.ok) {
-    res.status(response.status).json({ message: payload.message ?? 'Could not read Jotform forms.' })
+  if (!bestResult?.ok) {
+    res.status(bestResult?.status || 502).json({
+      message: bestResult?.message ?? 'Could not read Jotform forms.',
+      diagnostics: results.map((result) => ({
+        baseUrl: result.baseUrl,
+        status: result.status,
+        message: result.message ?? '',
+      })),
+    })
     return
   }
 
   res.setHeader('Cache-Control', 'no-store')
   res.status(200).json({
-    forms: (payload.content ?? []).map((form) => ({
+    baseUrl: bestResult.baseUrl,
+    diagnostics: results.map((result) => ({
+      baseUrl: result.baseUrl,
+      status: result.status,
+      formCount: result.ok ? (result.payload.content ?? []).length : 0,
+      message: result.message ?? '',
+    })),
+    forms: (bestResult.payload.content ?? []).map((form) => ({
       id: form.id ?? '',
       title: form.title ?? 'Untitled form',
       status: form.status ?? '',

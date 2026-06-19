@@ -257,13 +257,19 @@ function App() {
       const formLines = result.forms
         .slice(0, 12)
         .map((form) => `${form.id} - ${form.title}${form.status ? ` (${form.status})` : ''}`)
+      const diagnosticLines = (result.diagnostics ?? [])
+        .map((diagnostic) => {
+          const count = typeof diagnostic.formCount === 'number' ? `${diagnostic.formCount} forms` : 'no count'
+          const message = diagnostic.message ? ` - ${diagnostic.message}` : ''
+          return `${diagnostic.baseUrl}: ${diagnostic.status}, ${count}${message}`
+        })
       setExportDialog({
         status: 'success',
         title: `${result.forms.length} accessible Jotform forms`,
         message:
           formLines.length > 0
-            ? `Set JOTFORM_FORM_ID in Vercel to the matching ID:\n\n${formLines.join('\n')}`
-            : 'Jotform accepted the API key, but this key cannot see any forms. Generate the key from the form owner account, or confirm the form is owned by this Jotform account.',
+            ? `Using ${result.baseUrl ?? 'Jotform API'}.\n\nSet JOTFORM_FORM_ID in Vercel to the matching ID:\n\n${formLines.join('\n')}`
+            : `Jotform accepted the API key, but this key cannot see any forms on the checked API hosts.\n\n${diagnosticLines.join('\n') || 'No diagnostics returned.'}`,
       })
     } catch (error) {
       setExportDialog({

@@ -31,6 +31,8 @@ Copy `.env.example` to `.env.local` and fill in the API values before testing li
 ```bash
 JOTFORM_API_KEY=
 JOTFORM_FORM_ID=233391657291361
+JOTFORM_API_BASE=
+JOTFORM_TEAM_ID=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_ALLOWED_EMAIL=
@@ -41,6 +43,8 @@ GOOGLE_SHEET_ID=
 `GOOGLE_SHEET_ID` is optional. If it is omitted, the export endpoint creates a new spreadsheet called `RMS Review Votes YYYY-MM-DD`.
 
 `JOTFORM_API_KEY` must belong to a Jotform account that can read submissions for `JOTFORM_FORM_ID`. If Jotform returns `You're not authorized to use (/form-id-submissions)`, either the API key is from the wrong account or the configured ID is not the actual form ID.
+
+`JOTFORM_API_BASE` is optional. Leave it blank unless Jotform support or the app diagnostics show you need a specific API host, such as `https://api.jotform.com`, `https://eu-api.jotform.com`, or an Enterprise `/API` URL. `JOTFORM_TEAM_ID` is optional and only needed for forms that live inside a Jotform Team/workspace requiring the `jf-team-id` API header.
 
 ## Scripts
 
