@@ -97,6 +97,19 @@ button:disabled {
   color: #193b37;
 }
 
+.import-button {
+  cursor: pointer;
+  position: relative;
+}
+
+.file-import-input {
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
 .sheet-link {
   text-decoration: none;
 }

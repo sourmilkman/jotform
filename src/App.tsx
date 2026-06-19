@@ -14,8 +14,10 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  Upload,
   X,
 } from 'lucide-react'
+import type { ChangeEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { mockSubmissions } from './data/mockSubmissions'
@@ -28,6 +30,7 @@ import {
   submitVotesToJotform,
 } from './lib/apiClient'
 import { buildVote, getReviewProgress, upsertVote } from './lib/reviewState'
+import { importSubmissionsFromSpreadsheet } from './lib/spreadsheetImport'
 import type { ArtistSubmission, ReviewState, SyncState, VoteCounts } from './types'
 
 const voteOptions: Array<{
@@ -109,6 +112,7 @@ function App() {
     selectedSubmission?.artworks[0]
   const selectedVote = selectedArtwork ? reviewState[selectedArtwork.id] : undefined
   const progress = getReviewProgress(submissions, reviewState)
+  const hasImportedData = submissions.some((submission) => submission.source === 'import')
 
   useEffect(() => {
     fetchCurrentUser()
@@ -246,6 +250,49 @@ function App() {
     setExportState('Demo data loaded')
   }
 
+  const handleSpreadsheetImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setExportDialog({
+      status: 'working',
+      title: 'Importing spreadsheet',
+      message: `Reading ${file.name}...`,
+    })
+    try {
+      const importedSubmissions = await importSubmissionsFromSpreadsheet(file)
+      if (importedSubmissions.length === 0) {
+        throw new Error('No artwork rows were found. Export from Jotform Tables as CSV/XLSX and include the artwork/title/medium columns.')
+      }
+
+      setDemoMode(false)
+      setSubmissions(importedSubmissions)
+      setReviewState({})
+      selectSubmission(importedSubmissions[0])
+      setSyncState({
+        status: 'ready',
+        message: `${importedSubmissions.length} artists imported from ${file.name}`,
+        syncedAt: new Date().toISOString(),
+      })
+      setExportState('Imported spreadsheet data loaded')
+      setExportDialog({
+        status: 'success',
+        title: 'Spreadsheet imported',
+        message: `Loaded ${importedSubmissions.length} artists and ${importedSubmissions.reduce(
+          (total, submission) => total + submission.artworks.length,
+          0,
+        )} artworks from ${file.name}.`,
+      })
+    } catch (error) {
+      setExportDialog({
+        status: 'error',
+        title: 'Import failed',
+        message: error instanceof Error ? error.message : 'Could not import spreadsheet.',
+      })
+    }
+  }
+
   const handleFindForms = async () => {
     setExportDialog({
       status: 'working',
@@ -284,8 +331,10 @@ function App() {
     setExportState('Exporting to Google Sheet')
     setExportDialog({ status: 'working', message: 'Pulling latest Jotform data, then exporting to Google Sheets...' })
     try {
-      const latestSubmissions = demoMode ? submissions : (await fetchLiveSubmissions()).submissions
-      if (!demoMode) {
+      const latestSubmissions = demoMode || hasImportedData
+        ? submissions
+        : (await fetchLiveSubmissions()).submissions
+      if (!demoMode && !hasImportedData) {
         setSubmissions(latestSubmissions)
         if (latestSubmissions[0]) selectSubmission(latestSubmissions[0])
       }
@@ -311,6 +360,15 @@ function App() {
   }
 
   const handleSubmitVotes = async () => {
+    if (hasImportedData) {
+      setExportDialog({
+        status: 'error',
+        title: 'Cannot submit imported data to Jotform',
+        message: 'Spreadsheet imports are a local fallback. You can review and export them to Google Sheets, but Jotform submission requires API access to the original form.',
+      })
+      return
+    }
+
     setExportState('Submitting votes to Jotform')
     setExportDialog({ status: 'working', message: 'Submitting your votes to Jotform...' })
     try {
@@ -402,12 +460,22 @@ function App() {
               <Sparkles size={16} aria-hidden="true" />
               Load demo data
             </button>
-            <button type="button" className="secondary-button" onClick={handleFindForms}>
-              <ListChecks size={16} aria-hidden="true" />
-              Find Jotform forms
-            </button>
-          </div>
-        </main>
+          <button type="button" className="secondary-button" onClick={handleFindForms}>
+            <ListChecks size={16} aria-hidden="true" />
+            Find Jotform forms
+          </button>
+          <label className="secondary-button import-button">
+            <Upload size={16} aria-hidden="true" />
+            Import CSV/XLSX
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              className="file-import-input"
+              onChange={handleSpreadsheetImport}
+            />
+          </label>
+        </div>
+      </main>
         {statusDialog}
       </>
     )
@@ -427,7 +495,7 @@ function App() {
         </div>
         <div className="topbar-actions" aria-label="Review actions">
           <span className={demoMode ? 'data-source-pill demo' : 'data-source-pill'}>
-            {demoMode ? 'Demo data loaded' : 'Live Jotform data'}
+            {demoMode ? 'Demo data loaded' : hasImportedData ? 'Imported spreadsheet' : 'Live Jotform data'}
           </span>
           <button type="button" className="demo-data-button" onClick={handleLoadDemo}>
             <Sparkles size={16} aria-hidden="true" />
@@ -437,6 +505,16 @@ function App() {
             <ListChecks size={16} aria-hidden="true" />
             Find Jotform forms
           </button>
+          <label className="secondary-button import-button">
+            <Upload size={16} aria-hidden="true" />
+            Import CSV/XLSX
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              className="file-import-input"
+              onChange={handleSpreadsheetImport}
+            />
+          </label>
           {userEmail ? (
             <>
               <span className="signed-in-pill" title={`Signed in as ${userEmail}`}>

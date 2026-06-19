@@ -25,7 +25,7 @@ export type ArtistSubmission = {
   dateOfBirth?: string
   address?: string
   notes?: string
-  source: 'jotform' | 'demo'
+  source: 'jotform' | 'demo' | 'import'
   artworks: Artwork[]
 }
 
