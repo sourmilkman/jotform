@@ -263,7 +263,7 @@ function App() {
         message:
           formLines.length > 0
             ? `Set JOTFORM_FORM_ID in Vercel to the matching ID:\n\n${formLines.join('\n')}`
-            : 'This API key could not see any Jotform forms. Generate the key from the form owner account.',
+            : 'Jotform accepted the API key, but this key cannot see any forms. Generate the key from the form owner account, or confirm the form is owned by this Jotform account.',
       })
     } catch (error) {
       setExportDialog({
@@ -325,40 +325,85 @@ function App() {
     }
   }
 
+  const statusDialog =
+    exportDialog.status !== 'idle' ? (
+      <div className="dialog-backdrop" role="presentation">
+        <section
+          className="export-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="export-dialog-title"
+        >
+          <button
+            type="button"
+            className="dialog-close"
+            aria-label="Close export status"
+            onClick={() => setExportDialog({ status: 'idle' })}
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+          <div className={`dialog-status ${exportDialog.status}`}>
+            {exportDialog.status === 'working' ? <RotateCw size={24} aria-hidden="true" /> : null}
+            {exportDialog.status === 'success' ? <Check size={24} aria-hidden="true" /> : null}
+            {exportDialog.status === 'error' ? <X size={24} aria-hidden="true" /> : null}
+          </div>
+          <h2 id="export-dialog-title">
+            {exportDialog.title ??
+              (exportDialog.status === 'working'
+                ? 'Working'
+                : exportDialog.status === 'success'
+                  ? 'Complete'
+                  : 'Action failed')}
+          </h2>
+          <p className={exportDialog.status === 'error' ? 'dialog-error-message' : undefined}>
+            {exportDialog.message || 'No error details were returned. Please try again.'}
+          </p>
+          {exportDialog.status === 'success' && exportDialog.spreadsheetUrl ? (
+            <a className="primary-button dialog-link" href={exportDialog.spreadsheetUrl} target="_blank" rel="noreferrer">
+              {exportDialog.spreadsheetUrl.includes('jotform') ? 'Open Jotform' : 'Open Google Sheet'}
+            </a>
+          ) : null}
+        </section>
+      </div>
+    ) : null
+
   if (!selectedSubmission || !selectedArtwork) {
     return (
-      <main className="empty-state">
-        <ImageIcon aria-hidden="true" />
-        <h1>No submissions yet</h1>
-        <p>Pull live entries from Jotform, or load demo data when you want to test the voting flow.</p>
-        <div className="empty-sync-status" role="status" aria-live="polite">
-          <div className={`status-dot ${syncState.status}`} />
-          <div>
-            <strong>{syncState.message}</strong>
-            <span>{syncState.syncedAt ? `Last update ${formatDate(syncState.syncedAt)}` : 'Waiting for Jotform'}</span>
+      <>
+        <main className="empty-state">
+          <ImageIcon aria-hidden="true" />
+          <h1>No submissions yet</h1>
+          <p>Pull live entries from Jotform, or load demo data when you want to test the voting flow.</p>
+          <div className="empty-sync-status" role="status" aria-live="polite">
+            <div className={`status-dot ${syncState.status}`} />
+            <div>
+              <strong>{syncState.message}</strong>
+              <span>{syncState.syncedAt ? `Last update ${formatDate(syncState.syncedAt)}` : 'Waiting for Jotform'}</span>
+            </div>
           </div>
-        </div>
-        <div className="empty-actions">
-          <button type="button" onClick={handleSync} disabled={isSyncing}>
-            {isSyncing ? (
-              <>
-                <RotateCw size={16} aria-hidden="true" />
-                Pulling from Jotform
-              </>
-            ) : (
-              'Pull from Jotform'
-            )}
-          </button>
-          <button type="button" className="demo-data-button" onClick={handleLoadDemo}>
-            <Sparkles size={16} aria-hidden="true" />
-            Load demo data
-          </button>
-          <button type="button" className="secondary-button" onClick={handleFindForms}>
-            <ListChecks size={16} aria-hidden="true" />
-            Find Jotform forms
-          </button>
-        </div>
-      </main>
+          <div className="empty-actions">
+            <button type="button" onClick={handleSync} disabled={isSyncing}>
+              {isSyncing ? (
+                <>
+                  <RotateCw size={16} aria-hidden="true" />
+                  Pulling from Jotform
+                </>
+              ) : (
+                'Pull from Jotform'
+              )}
+            </button>
+            <button type="button" className="demo-data-button" onClick={handleLoadDemo}>
+              <Sparkles size={16} aria-hidden="true" />
+              Load demo data
+            </button>
+            <button type="button" className="secondary-button" onClick={handleFindForms}>
+              <ListChecks size={16} aria-hidden="true" />
+              Find Jotform forms
+            </button>
+          </div>
+        </main>
+        {statusDialog}
+      </>
     )
   }
 
@@ -604,46 +649,7 @@ function App() {
         </aside>
       </section>
 
-      {exportDialog.status !== 'idle' ? (
-        <div className="dialog-backdrop" role="presentation">
-          <section
-            className="export-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="export-dialog-title"
-          >
-            <button
-              type="button"
-              className="dialog-close"
-              aria-label="Close export status"
-              onClick={() => setExportDialog({ status: 'idle' })}
-            >
-              <X size={18} aria-hidden="true" />
-            </button>
-            <div className={`dialog-status ${exportDialog.status}`}>
-              {exportDialog.status === 'working' ? <RotateCw size={24} aria-hidden="true" /> : null}
-              {exportDialog.status === 'success' ? <Check size={24} aria-hidden="true" /> : null}
-              {exportDialog.status === 'error' ? <X size={24} aria-hidden="true" /> : null}
-            </div>
-            <h2 id="export-dialog-title">
-              {exportDialog.title ??
-                (exportDialog.status === 'working'
-                ? 'Working'
-                : exportDialog.status === 'success'
-                  ? 'Complete'
-                  : 'Action failed')}
-            </h2>
-            <p className={exportDialog.status === 'error' ? 'dialog-error-message' : undefined}>
-              {exportDialog.message || 'No error details were returned. Please try again.'}
-            </p>
-            {exportDialog.status === 'success' && exportDialog.spreadsheetUrl ? (
-              <a className="primary-button dialog-link" href={exportDialog.spreadsheetUrl} target="_blank" rel="noreferrer">
-                {exportDialog.spreadsheetUrl.includes('jotform') ? 'Open Jotform' : 'Open Google Sheet'}
-              </a>
-            ) : null}
-          </section>
-        </div>
-      ) : null}
+      {statusDialog}
     </main>
   )
 }
