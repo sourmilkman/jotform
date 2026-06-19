@@ -6,6 +6,7 @@ import {
   Download,
   FileSpreadsheet,
   ImageIcon,
+  ListChecks,
   LogOut,
   RotateCw,
   Search,
@@ -21,6 +22,7 @@ import { mockSubmissions } from './data/mockSubmissions'
 import {
   exportVotes,
   fetchCurrentUser,
+  fetchJotformForms,
   fetchLiveSubmissions,
   signOut,
   submitVotesToJotform,
@@ -244,6 +246,34 @@ function App() {
     setExportState('Demo data loaded')
   }
 
+  const handleFindForms = async () => {
+    setExportDialog({
+      status: 'working',
+      title: 'Checking Jotform forms',
+      message: 'Asking Jotform which forms this API key can access...',
+    })
+    try {
+      const result = await fetchJotformForms()
+      const formLines = result.forms
+        .slice(0, 12)
+        .map((form) => `${form.id} - ${form.title}${form.status ? ` (${form.status})` : ''}`)
+      setExportDialog({
+        status: 'success',
+        title: `${result.forms.length} accessible Jotform forms`,
+        message:
+          formLines.length > 0
+            ? `Set JOTFORM_FORM_ID in Vercel to the matching ID:\n\n${formLines.join('\n')}`
+            : 'This API key could not see any Jotform forms. Generate the key from the form owner account.',
+      })
+    } catch (error) {
+      setExportDialog({
+        status: 'error',
+        title: 'Could not list Jotform forms',
+        message: error instanceof Error ? error.message : 'Jotform form lookup failed.',
+      })
+    }
+  }
+
   const handleExport = async () => {
     setExportState('Exporting to Google Sheet')
     setExportDialog({ status: 'working', message: 'Pulling latest Jotform data, then exporting to Google Sheets...' })
@@ -323,6 +353,10 @@ function App() {
             <Sparkles size={16} aria-hidden="true" />
             Load demo data
           </button>
+          <button type="button" className="secondary-button" onClick={handleFindForms}>
+            <ListChecks size={16} aria-hidden="true" />
+            Find Jotform forms
+          </button>
         </div>
       </main>
     )
@@ -347,6 +381,10 @@ function App() {
           <button type="button" className="demo-data-button" onClick={handleLoadDemo}>
             <Sparkles size={16} aria-hidden="true" />
             Load demo data
+          </button>
+          <button type="button" className="secondary-button" onClick={handleFindForms}>
+            <ListChecks size={16} aria-hidden="true" />
+            Find Jotform forms
           </button>
           {userEmail ? (
             <>

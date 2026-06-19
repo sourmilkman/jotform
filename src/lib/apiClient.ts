@@ -1,5 +1,14 @@
 import type { ArtistSubmission, ReviewState } from '../types.js'
 
+export type JotformFormSummary = {
+  id: string
+  title: string
+  status: string
+  url: string
+  createdAt: string
+  updatedAt: string
+}
+
 const fetchWithTimeout = async (url: string, init: RequestInit = {}, timeoutMs = 20000) => {
   const controller = new AbortController()
   const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs)
@@ -41,6 +50,9 @@ const readJson = async <T>(response: Response): Promise<T> => {
 
 export const fetchLiveSubmissions = async () =>
   readJson<{ submissions: ArtistSubmission[] }>(await fetchWithTimeout('/api/jotform/submissions'))
+
+export const fetchJotformForms = async () =>
+  readJson<{ forms: JotformFormSummary[] }>(await fetchWithTimeout('/api/jotform/forms'))
 
 export const exportVotes = async (submissions: ArtistSubmission[], votes: ReviewState) =>
   readJson<{ spreadsheetId: string; spreadsheetUrl: string; updatedRows: number }>(

@@ -612,6 +612,12 @@ button:disabled {
   color: #5f4200;
 }
 
+.empty-state .secondary-button {
+  background: #ffffff;
+  border: 1px solid #c9d8d2;
+  color: #193b37;
+}
+
 .empty-sync-status {
   align-items: flex-start;
   background: #ffffff;
@@ -714,6 +720,7 @@ button:disabled {
 .export-dialog p {
   color: #4e625d;
   margin: 0;
+  white-space: pre-line;
 }
 
 .export-dialog .dialog-error-message {
