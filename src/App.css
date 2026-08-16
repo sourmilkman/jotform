@@ -682,6 +682,10 @@ button:disabled {
   width: 100%;
 }
 
+.paste-dialog {
+  max-width: 620px;
+}
+
 .dialog-close {
   align-items: center;
   background: #f6faf8;
@@ -753,6 +757,25 @@ button:disabled {
   margin-top: 18px;
   text-decoration: none;
   width: 100%;
+}
+
+.paste-field {
+  border: 1px solid #cfdcd6;
+  border-radius: 8px;
+  display: block;
+  min-height: 220px;
+  margin-top: 14px;
+  padding: 12px;
+  resize: vertical;
+  text-align: left;
+  width: 100%;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
 }
 
 @keyframes spin {

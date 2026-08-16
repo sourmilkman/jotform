@@ -1,5 +1,5 @@
 import { parseVoteCounts } from './jotformNormalizer.js'
-import type { ArtistSubmission, Artwork } from '../types.js'
+import type { ArtistSubmission, Artwork, VoteCounts } from '../types.js'
 
 const MAX_ARTWORKS = 6
 
@@ -97,7 +97,10 @@ const findArtworkField = (
 const findArtworkNumberNearHeader = (headers: string[], index: number) => {
   const extract = (header: string) => {
     const normalized = normalizeKey(header)
-    const match = normalized.match(/artwork(\d)/) ?? normalized.match(/votesartwork(\d)/)
+    const match =
+      normalized.match(/artwork.*?(\d)$/) ??
+      normalized.match(/votesartwork(\d)/) ??
+      normalized.match(/(\d)$/)
     return match?.[1] ?? ''
   }
 
@@ -120,6 +123,46 @@ const findArtworkNumberNearHeader = (headers: string[], index: number) => {
   return ''
 }
 
+const parseSingleVote = (value: string): keyof VoteCounts | '' => {
+  const normalized = value.toLowerCase().trim()
+  if (['y', 'yes'].includes(normalized)) return 'yes'
+  if (['m', 'maybe'].includes(normalized)) return 'maybe'
+  if (['n', 'no'].includes(normalized)) return 'no'
+  return ''
+}
+
+const isCouncilVoteHeader = (header: string, artworkNumber: number) => {
+  const key = normalizeKey(header)
+  if (!key.endsWith(String(artworkNumber))) return false
+  if (
+    key.includes('artwork') ||
+    key.includes('upload') ||
+    key.includes('title') ||
+    key.includes('medium') ||
+    key.includes('base') ||
+    key.includes('size')
+  ) {
+    return false
+  }
+  return true
+}
+
+const collectCouncilVoteCounts = (row: SpreadsheetRow, artworkNumber: number): VoteCounts => {
+  const counts: VoteCounts = { yes: 0, maybe: 0, no: 0 }
+  Object.entries(row).forEach(([header, rawValue]) => {
+    if (!isCouncilVoteHeader(header, artworkNumber)) return
+    const vote = parseSingleVote(valueToString(rawValue))
+    if (vote) counts[vote] += 1
+  })
+  return counts
+}
+
+const mergeVoteCounts = (primary: VoteCounts, secondary: VoteCounts): VoteCounts => ({
+  yes: primary.yes + secondary.yes,
+  maybe: primary.maybe + secondary.maybe,
+  no: primary.no + secondary.no,
+})
+
 const contextualizeHeader = (headers: string[], index: number) => {
   const header = headers[index] || `column ${index + 1}`
   const key = normalizeKey(header)
@@ -133,6 +176,56 @@ const contextualizeHeader = (headers: string[], index: number) => {
   }
 
   return header
+}
+
+const rowsFromMatrix = (matrix: unknown[][]): SpreadsheetRow[] => {
+  const headers = (matrix[0] ?? []).map(valueToString)
+  return matrix.slice(1).map((cells) =>
+    Object.fromEntries(
+      headers.map((_, index) => [
+        contextualizeHeader(headers, index),
+        cells[index] ?? '',
+      ]),
+    ),
+  )
+}
+
+const splitDelimitedLine = (line: string, delimiter: ',' | '\t') => {
+  if (delimiter === '\t') return line.split('\t')
+
+  const cells: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index]
+    const next = line[index + 1]
+    if (char === '"' && next === '"') {
+      current += '"'
+      index += 1
+    } else if (char === '"') {
+      inQuotes = !inQuotes
+    } else if (char === ',' && !inQuotes) {
+      cells.push(current)
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  cells.push(current)
+  return cells
+}
+
+const parseTextRows = (text: string): SpreadsheetRow[] => {
+  const lines = text
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .filter((line) => line.trim())
+  if (lines.length === 0) return []
+
+  const delimiter = lines[0].includes('\t') ? '\t' : ','
+  const matrix = lines.map((line) => splitDelimitedLine(line, delimiter))
+  return rowsFromMatrix(matrix)
 }
 
 const parseRows = async (buffer: ArrayBuffer): Promise<SpreadsheetRow[]> => {
@@ -150,22 +243,11 @@ const parseRows = async (buffer: ArrayBuffer): Promise<SpreadsheetRow[]> => {
     defval: '',
   })
 
-  const headers = (matrix[0] ?? []).map(valueToString)
-  return matrix.slice(1).map((cells) =>
-    Object.fromEntries(
-      headers.map((_, index) => [
-        contextualizeHeader(headers, index),
-        cells[index] ?? '',
-      ]),
-    ),
-  )
+  return rowsFromMatrix(matrix)
 }
 
-export const importSubmissionsFromSpreadsheet = async (file: File): Promise<ArtistSubmission[]> => {
-  const buffer = await file.arrayBuffer()
-  const rows = await parseRows(buffer)
-
-  return rows
+const submissionsFromRows = (rows: SpreadsheetRow[]): ArtistSubmission[] =>
+  rows
     .map((row, index): ArtistSubmission => {
       const id =
         findField(row, ['submission id', 'submissionid', 'id'], (key) =>
@@ -186,6 +268,7 @@ export const importSubmissionsFromSpreadsheet = async (file: File): Promise<Arti
         const title = findArtworkField(row, artworkNumber, 'title')
         const medium = findArtworkField(row, artworkNumber, 'medium')
         const votes = findArtworkField(row, artworkNumber, 'votes')
+        const voteCounts = mergeVoteCounts(parseVoteCounts(votes), collectCouncilVoteCounts(row, artworkNumber))
 
         if (!rawImage && !title && !medium && !votes) return null
 
@@ -200,7 +283,7 @@ export const importSubmissionsFromSpreadsheet = async (file: File): Promise<Arti
           title: title || `Artwork ${artworkNumber}`,
           medium: medium || 'Medium not supplied',
           imageUrl,
-          voteCounts: parseVoteCounts(votes),
+          voteCounts,
           ...(rawImage ? { fileName: rawImage.split(/[\\/]/).pop() } : {}),
         }
       }).filter((artwork): artwork is Artwork => artwork !== null)
@@ -220,4 +303,17 @@ export const importSubmissionsFromSpreadsheet = async (file: File): Promise<Arti
       }
     })
     .filter((submission) => submission.artworks.length > 0)
+
+export const importSubmissionsFromSpreadsheet = async (file: File): Promise<ArtistSubmission[]> => {
+  const buffer = await file.arrayBuffer()
+  const rows = await parseRows(buffer)
+
+  return submissionsFromRows(rows)
+}
+
+export const importSubmissionsFromText = async (text: string): Promise<ArtistSubmission[]> => {
+  const trimmed = text.trim()
+  if (!trimmed) return []
+
+  return submissionsFromRows(parseTextRows(trimmed))
 }

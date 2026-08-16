@@ -2,6 +2,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ClipboardPaste,
   Cloud,
   Download,
   FileSpreadsheet,
@@ -30,7 +31,7 @@ import {
   submitVotesToJotform,
 } from './lib/apiClient'
 import { buildVote, getReviewProgress, upsertVote } from './lib/reviewState'
-import { importSubmissionsFromSpreadsheet } from './lib/spreadsheetImport'
+import { importSubmissionsFromSpreadsheet, importSubmissionsFromText } from './lib/spreadsheetImport'
 import type { ArtistSubmission, ReviewState, SyncState, VoteCounts } from './types'
 
 const voteOptions: Array<{
@@ -81,6 +82,8 @@ function App() {
   )
   const [isCheckingSession, setIsCheckingSession] = useState(true)
   const [exportDialog, setExportDialog] = useState<ExportDialog>({ status: 'idle' })
+  const [isPasteImportOpen, setIsPasteImportOpen] = useState(false)
+  const [pastedTableText, setPastedTableText] = useState('')
   const [syncState, setSyncState] = useState<SyncState>({
     status: 'ready',
     message: 'Ready to pull from Jotform',
@@ -250,6 +253,27 @@ function App() {
     setExportState('Demo data loaded')
   }
 
+  const loadImportedSubmissions = (importedSubmissions: ArtistSubmission[], label: string) => {
+    setDemoMode(false)
+    setSubmissions(importedSubmissions)
+    setReviewState({})
+    selectSubmission(importedSubmissions[0])
+    setSyncState({
+      status: 'ready',
+      message: `${importedSubmissions.length} artists imported from ${label}`,
+      syncedAt: new Date().toISOString(),
+    })
+    setExportState('Imported spreadsheet data loaded')
+    setExportDialog({
+      status: 'success',
+      title: 'Import complete',
+      message: `Loaded ${importedSubmissions.length} artists and ${importedSubmissions.reduce(
+        (total, submission) => total + submission.artworks.length,
+        0,
+      )} artworks from ${label}.`,
+    })
+  }
+
   const handleSpreadsheetImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -266,29 +290,36 @@ function App() {
         throw new Error('No artwork rows were found. Export from Jotform Tables as CSV/XLSX and include the artwork/title/medium columns.')
       }
 
-      setDemoMode(false)
-      setSubmissions(importedSubmissions)
-      setReviewState({})
-      selectSubmission(importedSubmissions[0])
-      setSyncState({
-        status: 'ready',
-        message: `${importedSubmissions.length} artists imported from ${file.name}`,
-        syncedAt: new Date().toISOString(),
-      })
-      setExportState('Imported spreadsheet data loaded')
-      setExportDialog({
-        status: 'success',
-        title: 'Spreadsheet imported',
-        message: `Loaded ${importedSubmissions.length} artists and ${importedSubmissions.reduce(
-          (total, submission) => total + submission.artworks.length,
-          0,
-        )} artworks from ${file.name}.`,
-      })
+      loadImportedSubmissions(importedSubmissions, file.name)
     } catch (error) {
       setExportDialog({
         status: 'error',
         title: 'Import failed',
         message: error instanceof Error ? error.message : 'Could not import spreadsheet.',
+      })
+    }
+  }
+
+  const handlePasteImport = async () => {
+    setExportDialog({
+      status: 'working',
+      title: 'Importing pasted data',
+      message: 'Reading the copied Jotform table data...',
+    })
+    try {
+      const importedSubmissions = await importSubmissionsFromText(pastedTableText)
+      if (importedSubmissions.length === 0) {
+        throw new Error('No artwork rows were found. Copy the table header row and artist rows from Jotform, then paste them here.')
+      }
+
+      setIsPasteImportOpen(false)
+      setPastedTableText('')
+      loadImportedSubmissions(importedSubmissions, 'pasted table data')
+    } catch (error) {
+      setExportDialog({
+        status: 'error',
+        title: 'Paste import failed',
+        message: error instanceof Error ? error.message : 'Could not import the pasted table data.',
       })
     }
   }
@@ -431,13 +462,52 @@ function App() {
       </div>
     ) : null
 
+  const pasteImportDialog = isPasteImportOpen ? (
+    <div className="dialog-backdrop" role="presentation">
+      <section
+        className="export-dialog paste-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="paste-dialog-title"
+      >
+        <button
+          type="button"
+          className="dialog-close"
+          aria-label="Close paste import"
+          onClick={() => setIsPasteImportOpen(false)}
+        >
+          <X size={18} aria-hidden="true" />
+        </button>
+        <div className="dialog-status success">
+          <ClipboardPaste size={24} aria-hidden="true" />
+        </div>
+        <h2 id="paste-dialog-title">Paste Jotform table data</h2>
+        <p>Copy the table header row and artist rows from Jotform Tables, then paste them below.</p>
+        <textarea
+          className="paste-field"
+          value={pastedTableText}
+          onChange={(event) => setPastedTableText(event.target.value)}
+          placeholder="email	name	date of birth	artwork 1..."
+        />
+        <div className="dialog-actions">
+          <button type="button" className="secondary-button" onClick={() => setIsPasteImportOpen(false)}>
+            Cancel
+          </button>
+          <button type="button" className="primary-button" onClick={handlePasteImport}>
+            Import pasted data
+          </button>
+        </div>
+      </section>
+    </div>
+  ) : null
+
   if (!selectedSubmission || !selectedArtwork) {
     return (
       <>
         <main className="empty-state">
           <ImageIcon aria-hidden="true" />
           <h1>No submissions yet</h1>
-          <p>Pull live entries from Jotform, or load demo data when you want to test the voting flow.</p>
+          <p>Pull live entries from Jotform, import a file, paste copied table rows, or load demo data.</p>
           <div className="empty-sync-status" role="status" aria-live="polite">
             <div className={`status-dot ${syncState.status}`} />
             <div>
@@ -474,9 +544,14 @@ function App() {
               onChange={handleSpreadsheetImport}
             />
           </label>
+          <button type="button" className="secondary-button" onClick={() => setIsPasteImportOpen(true)}>
+            <ClipboardPaste size={16} aria-hidden="true" />
+            Paste table data
+          </button>
         </div>
       </main>
         {statusDialog}
+        {pasteImportDialog}
       </>
     )
   }
@@ -515,6 +590,10 @@ function App() {
               onChange={handleSpreadsheetImport}
             />
           </label>
+          <button type="button" className="secondary-button" onClick={() => setIsPasteImportOpen(true)}>
+            <ClipboardPaste size={16} aria-hidden="true" />
+            Paste table data
+          </button>
           {userEmail ? (
             <>
               <span className="signed-in-pill" title={`Signed in as ${userEmail}`}>
@@ -734,6 +813,7 @@ function App() {
       </section>
 
       {statusDialog}
+      {pasteImportDialog}
     </main>
   )
 }

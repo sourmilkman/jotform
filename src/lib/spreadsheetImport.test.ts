@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { importSubmissionsFromSpreadsheet } from './spreadsheetImport'
+import { importSubmissionsFromSpreadsheet, importSubmissionsFromText } from './spreadsheetImport'
 
 describe('importSubmissionsFromSpreadsheet', () => {
   it('imports artist rows and artwork columns from CSV', async () => {
@@ -24,5 +24,29 @@ describe('importSubmissionsFromSpreadsheet', () => {
     })
     expect(submissions[0].artworks[1].imageUrl).toContain('data:image/svg+xml')
     expect(submissions[0].artworks[1].fileName).toBe('second-file.jpg')
+  })
+
+  it('imports copied Jotform table data from TSV text', async () => {
+    const tsv = [
+      'Email Address\tName\tAge, if you are aged between 14-30\tArtwork upload 1\tMedium and base\tTitle\tTom M 1',
+      'artist@example.com\tAda Painter\t2000-01-02\thttps://example.com/art.jpg\tOil on board\tBlue Study\tYes',
+    ].join('\n')
+
+    const submissions = await importSubmissionsFromText(tsv)
+
+    expect(submissions).toHaveLength(1)
+    expect(submissions[0]).toMatchObject({
+      source: 'import',
+      artistName: 'Ada Painter',
+      email: 'artist@example.com',
+    })
+    expect(submissions[0].dateOfBirth).toBe('')
+    expect(submissions[0].artworks[0]).toMatchObject({
+      artworkNumber: 1,
+      title: 'Blue Study',
+      medium: 'Oil on board',
+      imageUrl: 'https://example.com/art.jpg',
+      voteCounts: { yes: 1, maybe: 0, no: 0 },
+    })
   })
 })
