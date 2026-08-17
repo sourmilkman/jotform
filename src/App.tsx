@@ -473,9 +473,9 @@ function App() {
           <p className={exportDialog.status === 'error' ? 'dialog-error-message' : undefined}>
             {exportDialog.message || 'No error details were returned. Please try again.'}
           </p>
-          {exportDialog.status === 'success' && exportDialog.spreadsheetUrl ? (
+          {exportDialog.status === 'success' && exportDialog.spreadsheetUrl?.includes('docs.google.com') ? (
             <a className="primary-button dialog-link" href={exportDialog.spreadsheetUrl} target="_blank" rel="noreferrer">
-              {exportDialog.spreadsheetUrl.includes('jotform') ? 'Open Jotform' : 'Open Google Sheet'}
+              Open Google Sheet
             </a>
           ) : null}
         </section>
