@@ -17,6 +17,7 @@ type ArtistSubmission = {
     medium: string
     imageUrl: string
     voteCounts: VoteCounts
+    rawVoteCounts?: Record<string, number>
   }>
 }
 
@@ -37,6 +38,23 @@ const clearRange = quotedSheetTitle
 const appendRange = `${quotedSheetTitle}!A1`
 const MAX_ARTWORKS = 6
 const COOKIE_NAME = 'rms_review_session'
+
+const formatVoteCounts = (counts: VoteCounts) =>
+  `Yes: ${counts.yes}; Maybe: ${counts.maybe}; No: ${counts.no}`
+
+const getVoteTotal = (counts: VoteCounts) => counts.yes + counts.maybe + counts.no
+
+const formatArtworkVoteCounts = (artwork: ArtistSubmission['artworks'][number]) => {
+  if (getVoteTotal(artwork.voteCounts) > 0 || !artwork.rawVoteCounts) {
+    return formatVoteCounts(artwork.voteCounts)
+  }
+
+  const rawCounts = Object.entries(artwork.rawVoteCounts)
+    .map(([code, count]) => `${code}: ${count}`)
+    .join('; ')
+
+  return rawCounts ? `Unmapped votes - ${rawCounts}` : formatVoteCounts(artwork.voteCounts)
+}
 
 type GoogleSpreadsheet = {
   spreadsheetId: string
@@ -137,7 +155,7 @@ const buildSheetPayload = (submissions: ArtistSubmission[]) => ({
         artwork.imageUrl,
         artwork.title,
         artwork.medium,
-        `Yes: ${artwork.voteCounts.yes}; Maybe: ${artwork.voteCounts.maybe}; No: ${artwork.voteCounts.no}`,
+        formatArtworkVoteCounts(artwork),
       ]
     }).flat(),
   ]),

@@ -131,6 +131,11 @@ describe('normalizeJotformSubmissions', () => {
       maybe: 1,
       no: 1,
     })
+    expect(result[0].artworks[0].rawVoteCounts).toEqual({
+      '{yesid}': 1,
+      '{maybeid}': 1,
+      '{noid}': 1,
+    })
   })
 
   it('maps real RMS upload fields with sibling title and medium fields', () => {

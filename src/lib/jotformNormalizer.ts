@@ -259,6 +259,20 @@ const collectCouncilVoteCounts = (
     return vote ? addVoteToCounts(counts, vote) : counts
   }, { yes: 0, maybe: 0, no: 0 })
 
+const collectRawCouncilVoteCounts = (
+  answers: Record<string, JotformAnswer>,
+  artworkNumber: number,
+): Record<string, number> =>
+  Object.values(answers).reduce<Record<string, number>>((counts, answer) => {
+    if (!isCouncilVoteField(answer, artworkNumber)) return counts
+    const rawVote = valueToString(answer.answer ?? answer.prettyFormat)
+    if (!rawVote) return counts
+    return {
+      ...counts,
+      [rawVote]: (counts[rawVote] ?? 0) + 1,
+    }
+  }, {})
+
 export const normalizeJotformSubmissions = (
   submissions: JotformSubmission[],
 ): ArtistSubmission[] =>
@@ -285,6 +299,7 @@ export const normalizeJotformSubmissions = (
         valueToString(voteFieldEntry?.[1].answer ?? voteFieldEntry?.[1].prettyFormat),
       )
       const councilVoteCounts = collectCouncilVoteCounts(answers, artworkNumber)
+      const rawVoteCounts = collectRawCouncilVoteCounts(answers, artworkNumber)
       const reviewerVoteFieldEntry = findReviewerVoteFieldEntry(answers, artworkNumber)
       const myVoteRaw = valueToString(
         reviewerVoteFieldEntry?.[1].answer ?? reviewerVoteFieldEntry?.[1].prettyFormat,
@@ -302,6 +317,7 @@ export const normalizeJotformSubmissions = (
         voteCounts: getVoteTotal(councilVoteCounts) > 0
           ? councilVoteCounts
           : mergeVoteCounts(fieldVoteCounts, councilVoteCounts),
+        ...(Object.keys(rawVoteCounts).length > 0 ? { rawVoteCounts } : {}),
         ...(myVote ? { myVote } : {}),
         ...(myVoteRaw ? { myVoteRaw } : {}),
         ...(voteFieldEntry?.[0] ? { jotformVoteFieldId: voteFieldEntry[0] } : {}),

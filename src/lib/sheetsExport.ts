@@ -1,4 +1,4 @@
-import type { ArtistSubmission, VoteCounts } from '../types.js'
+import type { ArtistSubmission, Artwork, VoteCounts } from '../types.js'
 
 const MAX_ARTWORKS = 6
 
@@ -20,6 +20,20 @@ export const SHEET_HEADERS = [
 export const formatVoteCounts = (counts: VoteCounts) =>
   `Yes: ${counts.yes}; Maybe: ${counts.maybe}; No: ${counts.no}`
 
+const getVoteTotal = (counts: VoteCounts) => counts.yes + counts.maybe + counts.no
+
+export const formatArtworkVoteCounts = (artwork: Artwork) => {
+  if (getVoteTotal(artwork.voteCounts) > 0 || !artwork.rawVoteCounts) {
+    return formatVoteCounts(artwork.voteCounts)
+  }
+
+  const rawCounts = Object.entries(artwork.rawVoteCounts)
+    .map(([code, count]) => `${code}: ${count}`)
+    .join('; ')
+
+  return rawCounts ? `Unmapped votes - ${rawCounts}` : formatVoteCounts(artwork.voteCounts)
+}
+
 export const buildSheetRows = (submissions: ArtistSubmission[]) =>
   submissions.map((submission) => {
     const artworkColumns = Array.from({ length: MAX_ARTWORKS }, (_, index) => {
@@ -31,7 +45,7 @@ export const buildSheetRows = (submissions: ArtistSubmission[]) =>
         artwork.imageUrl,
         artwork.title,
         artwork.medium,
-        formatVoteCounts(artwork.voteCounts),
+        formatArtworkVoteCounts(artwork),
       ]
     }).flat()
 

@@ -12,6 +12,7 @@ export type Artwork = {
   medium: string
   imageUrl: string
   voteCounts: VoteCounts
+  rawVoteCounts?: Record<string, number>
   myVote?: keyof VoteCounts
   myVoteRaw?: string
   jotformVoteFieldId?: string

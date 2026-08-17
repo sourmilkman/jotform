@@ -22,4 +22,20 @@ describe('buildSheetPayload', () => {
     ])
     expect(payload.rows[0]).toHaveLength(27)
   })
+
+  it('exports raw council vote code totals when vote options are unmapped', () => {
+    const first = {
+      ...mockSubmissions[0],
+      artworks: [
+        {
+          ...mockSubmissions[0].artworks[0],
+          voteCounts: { yes: 0, maybe: 0, no: 0 },
+          rawVoteCounts: { '{yesid}': 2, '{maybeid}': 1 },
+        },
+      ],
+    }
+    const payload = buildSheetPayload([first])
+
+    expect(payload.rows[0][6]).toBe('Unmapped votes - {yesid}: 2; {maybeid}: 1')
+  })
 })
