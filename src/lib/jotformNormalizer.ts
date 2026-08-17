@@ -77,9 +77,10 @@ const getNumericFieldId = (fieldId: string) => {
 
 const parseSingleVote = (value: string): keyof VoteCounts | '' => {
   const normalized = value.toLowerCase().trim()
-  if (['y', 'yes'].includes(normalized)) return 'yes'
-  if (['m', 'maybe'].includes(normalized)) return 'maybe'
-  if (['n', 'no'].includes(normalized)) return 'no'
+  const compact = normalized.replace(/[^a-z]/g, '')
+  if (['y', 'yes'].includes(compact) || normalized.match(/^y(?:es)?\b/)) return 'yes'
+  if (['m', 'maybe'].includes(compact) || normalized.match(/^m(?:aybe)?\b/)) return 'maybe'
+  if (['n', 'no'].includes(compact) || normalized.match(/^n(?:o)?\b/)) return 'no'
   return ''
 }
 
@@ -219,7 +220,9 @@ export const normalizeJotformSubmissions = (
         'Medium not supplied'
       const voteFieldEntry = findArtworkFieldEntry(answers, artworkNumber, 'votes')
       const reviewerVoteFieldEntry = findReviewerVoteFieldEntry(answers, artworkNumber)
-      const myVote = parseSingleVote(valueToString(reviewerVoteFieldEntry?.[1].answer))
+      const myVote = parseSingleVote(
+        valueToString(reviewerVoteFieldEntry?.[1].answer ?? reviewerVoteFieldEntry?.[1].prettyFormat),
+      )
 
       const fileName = imageUrl.split('/').pop()
       return {
@@ -230,7 +233,7 @@ export const normalizeJotformSubmissions = (
         medium,
         imageUrl,
         voteCounts: parseVoteCounts(
-          valueToString(voteFieldEntry?.[1].answer),
+          valueToString(voteFieldEntry?.[1].answer ?? voteFieldEntry?.[1].prettyFormat),
         ),
         ...(myVote ? { myVote } : {}),
         ...(voteFieldEntry?.[0] ? { jotformVoteFieldId: voteFieldEntry[0] } : {}),

@@ -73,7 +73,7 @@ describe('normalizeJotformSubmissions', () => {
         id: '789',
         answers: {
           '10': { name: 'artworkUpload1', text: 'Artwork upload 1', answer: ['https://files.jotform.com/one.jpg'] },
-          '11': { name: 'tomM1', text: 'Tom M 1', answer: 'Maybe' },
+          '11': { name: 'tomM1', text: 'Tom M 1', prettyFormat: 'Maybe selected' },
         },
       },
     ])
