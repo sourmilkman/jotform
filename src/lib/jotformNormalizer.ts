@@ -133,6 +133,14 @@ export const addVoteToCounts = (counts: VoteCounts, vote?: keyof VoteCounts): Vo
   ...(vote ? { [vote]: counts[vote] + 1 } : {}),
 })
 
+const mergeVoteCounts = (primary: VoteCounts, secondary: VoteCounts): VoteCounts => ({
+  yes: primary.yes + secondary.yes,
+  maybe: primary.maybe + secondary.maybe,
+  no: primary.no + secondary.no,
+})
+
+const getVoteTotal = (counts: VoteCounts) => counts.yes + counts.maybe + counts.no
+
 const findArtworkField = (
   answers: Record<string, JotformAnswer>,
   artworkNumber: number,
@@ -224,6 +232,33 @@ const findReviewerVoteFieldEntry = (
   })
 }
 
+const isCouncilVoteField = (answer: JotformAnswer, artworkNumber: number) => {
+  const label = getAnswerLabel(answer)
+  if (getArtworkNumberFromLabel(answer) !== artworkNumber) return false
+  if (
+    label.includes('artwork') ||
+    label.includes('upload') ||
+    label.includes('title') ||
+    label.includes('medium') ||
+    label.includes('base') ||
+    label.includes('size') ||
+    label.includes('vote')
+  ) {
+    return false
+  }
+  return true
+}
+
+const collectCouncilVoteCounts = (
+  answers: Record<string, JotformAnswer>,
+  artworkNumber: number,
+): VoteCounts =>
+  Object.values(answers).reduce<VoteCounts>((counts, answer) => {
+    if (!isCouncilVoteField(answer, artworkNumber)) return counts
+    const vote = parseReviewerVote(valueToString(answer.answer ?? answer.prettyFormat))
+    return vote ? addVoteToCounts(counts, vote) : counts
+  }, { yes: 0, maybe: 0, no: 0 })
+
 export const normalizeJotformSubmissions = (
   submissions: JotformSubmission[],
 ): ArtistSubmission[] =>
@@ -246,6 +281,10 @@ export const normalizeJotformSubmissions = (
         getAnswer(answers, ['medium']) ||
         'Medium not supplied'
       const voteFieldEntry = findArtworkFieldEntry(answers, artworkNumber, 'votes')
+      const fieldVoteCounts = parseVoteCounts(
+        valueToString(voteFieldEntry?.[1].answer ?? voteFieldEntry?.[1].prettyFormat),
+      )
+      const councilVoteCounts = collectCouncilVoteCounts(answers, artworkNumber)
       const reviewerVoteFieldEntry = findReviewerVoteFieldEntry(answers, artworkNumber)
       const myVoteRaw = valueToString(
         reviewerVoteFieldEntry?.[1].answer ?? reviewerVoteFieldEntry?.[1].prettyFormat,
@@ -260,9 +299,9 @@ export const normalizeJotformSubmissions = (
         title,
         medium,
         imageUrl,
-        voteCounts: parseVoteCounts(
-          valueToString(voteFieldEntry?.[1].answer ?? voteFieldEntry?.[1].prettyFormat),
-        ),
+        voteCounts: getVoteTotal(councilVoteCounts) > 0
+          ? councilVoteCounts
+          : mergeVoteCounts(fieldVoteCounts, councilVoteCounts),
         ...(myVote ? { myVote } : {}),
         ...(myVoteRaw ? { myVoteRaw } : {}),
         ...(voteFieldEntry?.[0] ? { jotformVoteFieldId: voteFieldEntry[0] } : {}),

@@ -107,6 +107,32 @@ describe('normalizeJotformSubmissions', () => {
     })
   })
 
+  it('aggregates council member vote fields per artwork', () => {
+    const runtimeProcess = (globalThis as {
+      process?: { env?: Record<string, string | undefined> }
+    }).process
+    if (runtimeProcess?.env) runtimeProcess.env.JOTFORM_VOTE_OPTION_MAP = '{yesid}=Yes,{maybeid}=Maybe,{noid}=No'
+    const result = normalizeJotformSubmissions([
+      {
+        id: 'council',
+        answers: {
+          '10': { name: 'artworkUpload1', text: 'Artwork upload 1', answer: ['https://files.jotform.com/one.jpg'] },
+          '20': { name: 'rayWinder1', text: 'Ray Winder 1', prettyFormat: '{yesid}' },
+          '21': { name: 'tomM1', text: 'Tom M 1', prettyFormat: '{maybeid}' },
+          '22': { name: 'sarah1', text: 'Sarah 1', prettyFormat: '{noid}' },
+          '23': { name: 'mediumAnd1', text: 'Medium and base 1', prettyFormat: 'Oil' },
+        },
+      },
+    ])
+    if (runtimeProcess?.env) delete runtimeProcess.env.JOTFORM_VOTE_OPTION_MAP
+
+    expect(result[0].artworks[0].voteCounts).toEqual({
+      yes: 1,
+      maybe: 1,
+      no: 1,
+    })
+  })
+
   it('maps real RMS upload fields with sibling title and medium fields', () => {
     const result = normalizeJotformSubmissions([
       {
