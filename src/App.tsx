@@ -51,6 +51,11 @@ const formatDate = (value: string) =>
     year: 'numeric',
   }).format(new Date(value))
 
+const getDisplayImageUrl = (url: string) => {
+  if (!url.includes('jotform.com/uploads/')) return url
+  return `/api/jotform/file?url=${encodeURIComponent(url)}`
+}
+
 const LAST_SHEET_URL_KEY = 'rms-review:last-sheet-url'
 
 const readCookie = (name: string) =>
@@ -737,7 +742,7 @@ function App() {
           </div>
 
           <div className="artwork-stage">
-            <img src={selectedArtwork.imageUrl} alt={selectedArtwork.title} loading="lazy" />
+            <img src={getDisplayImageUrl(selectedArtwork.imageUrl)} alt={selectedArtwork.title} loading="lazy" />
           </div>
 
           <div className="artwork-meta">
@@ -755,7 +760,7 @@ function App() {
                 onClick={() => setSelectedArtworkId(artwork.id)}
                 aria-label={`View ${artwork.title}`}
               >
-                <img src={artwork.imageUrl} alt="" loading="lazy" />
+                <img src={getDisplayImageUrl(artwork.imageUrl)} alt="" loading="lazy" />
                 {reviewState[artwork.id] || artwork.myVoteRaw ? <Check size={14} aria-hidden="true" /> : null}
               </button>
             ))}
