@@ -3,6 +3,18 @@ import { buildJotformHeaders } from '../_lib/jotform.js'
 
 const allowedHosts = new Set(['eu.jotform.com', 'www.jotform.com', 'jotform.com'])
 
+const getImageContentType = (url: URL, contentType: string) => {
+  const lowerContentType = contentType.toLowerCase()
+  if (lowerContentType.startsWith('image/')) return contentType
+
+  const pathname = url.pathname.toLowerCase()
+  if (pathname.endsWith('.jpg') || pathname.endsWith('.jpeg')) return 'image/jpeg'
+  if (pathname.endsWith('.png')) return 'image/png'
+  if (pathname.endsWith('.gif')) return 'image/gif'
+  if (pathname.endsWith('.webp')) return 'image/webp'
+  return ''
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.JOTFORM_API_KEY
   const rawUrl = typeof req.query.url === 'string' ? req.query.url : ''
@@ -35,10 +47,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     redirect: 'follow',
   })
 
-  const contentType = response.headers.get('content-type') ?? ''
-  if (!response.ok || !contentType.toLowerCase().startsWith('image/')) {
+  const contentType = getImageContentType(fileUrl, response.headers.get('content-type') ?? '')
+  if (!response.ok || !contentType) {
     res.status(502).json({
-      message: `Jotform returned ${response.status} ${contentType || 'unknown content type'} instead of an image.`,
+      message: `Jotform returned ${response.status} ${response.headers.get('content-type') || 'unknown content type'} instead of an image.`,
     })
     return
   }
