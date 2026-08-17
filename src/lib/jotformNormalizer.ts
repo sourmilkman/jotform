@@ -84,6 +84,18 @@ const parseSingleVote = (value: string): keyof VoteCounts | '' => {
   return ''
 }
 
+const DEFAULT_VOTE_OPTION_MAP: Record<string, keyof VoteCounts> = {
+  '{42fe2iu8fmt}': 'yes',
+  '{cyg6xi5bkv9}': 'yes',
+  '{uqrq16sp94h}': 'yes',
+  '{ddx8x77zjk5}': 'maybe',
+  '{kqlf034ndxm}': 'maybe',
+  '{o545lexbav}': 'maybe',
+  '{d2ndbr0olw6}': 'no',
+  '{naap8bkdxw8}': 'no',
+  '{vsttxypztxd}': 'no',
+}
+
 const parseVoteOptionMap = () => {
   const runtimeProcess = (globalThis as {
     process?: { env?: Record<string, string | undefined> }
@@ -98,7 +110,7 @@ const parseVoteOptionMap = () => {
       const vote = parseSingleVote(rawVote ?? '')
       if (rawCode && vote) map[rawCode.toLowerCase()] = vote
       return map
-    }, {})
+    }, { ...DEFAULT_VOTE_OPTION_MAP })
 }
 
 const parseReviewerVote = (value: string): keyof VoteCounts | '' => {
