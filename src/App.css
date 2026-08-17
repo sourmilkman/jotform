@@ -612,6 +612,17 @@ button:disabled {
   padding: 0 14px;
 }
 
+.empty-build {
+  background: #edf5f1;
+  border: 1px solid #c9d8d2;
+  border-radius: 999px;
+  color: #48615c;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 6px 9px;
+}
+
 .empty-actions {
   display: flex;
   flex-wrap: wrap;

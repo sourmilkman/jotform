@@ -533,6 +533,9 @@ function App() {
         <main className="empty-state">
           <ImageIcon aria-hidden="true" />
           <h1>No submissions yet</h1>
+          <span className="empty-build" title={`Version ${__APP_VERSION__}, build ${__BUILD_REF__}`}>
+            RMS Review v{__APP_VERSION__} · {__BUILD_REF__}
+          </span>
           <p>Pull live entries from Jotform, import a file, paste copied table rows, or load demo data.</p>
           <div className="empty-sync-status" role="status" aria-live="polite">
             <div className={`status-dot ${syncState.status}`} />
