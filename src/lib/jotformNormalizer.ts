@@ -78,9 +78,9 @@ const getNumericFieldId = (fieldId: string) => {
 const parseSingleVote = (value: string): keyof VoteCounts | '' => {
   const normalized = value.toLowerCase().trim()
   const compact = normalized.replace(/[^a-z]/g, '')
-  if (['y', 'yes'].includes(compact) || normalized.match(/^y(?:es)?\b/)) return 'yes'
-  if (['m', 'maybe'].includes(compact) || normalized.match(/^m(?:aybe)?\b/)) return 'maybe'
-  if (['n', 'no'].includes(compact) || normalized.match(/^n(?:o)?\b/)) return 'no'
+  if (['y', 'yes'].includes(compact) || normalized.match(/^yes\b/)) return 'yes'
+  if (['m', 'maybe'].includes(compact) || normalized.match(/^maybe\b/)) return 'maybe'
+  if (['n', 'no'].includes(compact) || normalized.match(/^no\b/)) return 'no'
   return ''
 }
 
@@ -109,6 +109,12 @@ const parseReviewerVote = (value: string): keyof VoteCounts | '' => {
   const normalized = value.toLowerCase().trim()
   const compact = normalized.replace(/[{}\s]/g, '')
   return optionMap[normalized] ?? optionMap[`{${compact}}`] ?? optionMap[compact] ?? ''
+}
+
+const isRawVoteValue = (value: string) => {
+  if (!value) return false
+  if (parseSingleVote(value)) return true
+  return /^\{[a-z0-9]+\}$/i.test(value.trim())
 }
 
 export const parseVoteCounts = (value: string): VoteCounts => {
@@ -255,7 +261,9 @@ const collectCouncilVoteCounts = (
 ): VoteCounts =>
   Object.values(answers).reduce<VoteCounts>((counts, answer) => {
     if (!isCouncilVoteField(answer, artworkNumber)) return counts
-    const vote = parseReviewerVote(valueToString(answer.answer ?? answer.prettyFormat))
+    const rawVote = valueToString(answer.answer ?? answer.prettyFormat)
+    if (!isRawVoteValue(rawVote)) return counts
+    const vote = parseReviewerVote(rawVote)
     return vote ? addVoteToCounts(counts, vote) : counts
   }, { yes: 0, maybe: 0, no: 0 })
 
@@ -266,7 +274,7 @@ const collectRawCouncilVoteCounts = (
   Object.values(answers).reduce<Record<string, number>>((counts, answer) => {
     if (!isCouncilVoteField(answer, artworkNumber)) return counts
     const rawVote = valueToString(answer.answer ?? answer.prettyFormat)
-    if (!rawVote) return counts
+    if (!isRawVoteValue(rawVote)) return counts
     return {
       ...counts,
       [rawVote]: (counts[rawVote] ?? 0) + 1,

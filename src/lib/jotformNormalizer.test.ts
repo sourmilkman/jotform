@@ -138,6 +138,29 @@ describe('normalizeJotformSubmissions', () => {
     })
   })
 
+  it('does not count unrelated fields ending in an artwork number as council votes', () => {
+    const result = normalizeJotformSubmissions([
+      {
+        id: 'unrelated',
+        answers: {
+          '10': { name: 'artworkUpload1', text: 'Artwork upload 1', answer: ['https://files.jotform.com/one.jpg'] },
+          '20': { name: 'name1', text: 'Name 1', answer: 'Yvonne Artist' },
+          '21': { name: 'email1', text: 'Email 1', answer: 'artist@example.com' },
+          '22': { name: 'rayWinder1', text: 'Ray Winder 1', prettyFormat: '{voteid}' },
+        },
+      },
+    ])
+
+    expect(result[0].artworks[0].rawVoteCounts).toEqual({
+      '{voteid}': 1,
+    })
+    expect(result[0].artworks[0].voteCounts).toEqual({
+      yes: 0,
+      maybe: 0,
+      no: 0,
+    })
+  })
+
   it('maps real RMS upload fields with sibling title and medium fields', () => {
     const result = normalizeJotformSubmissions([
       {
