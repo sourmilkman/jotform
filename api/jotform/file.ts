@@ -25,6 +25,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  fileUrl.searchParams.set('apiKey', apiKey)
+
   const response = await fetch(fileUrl, {
     headers: {
       ...buildJotformHeaders(apiKey),
