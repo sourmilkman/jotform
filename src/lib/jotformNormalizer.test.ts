@@ -45,4 +45,43 @@ describe('normalizeJotformSubmissions', () => {
 
     expect(result[0].artworks).toEqual([])
   })
+
+  it('does not use question id digits when matching artwork numbers', () => {
+    const result = normalizeJotformSubmissions([
+      {
+        id: '456',
+        answers: {
+          '61': { name: 'q61_artworkUpload5', text: 'Artwork upload 5', answer: ['https://files.jotform.com/five.jpg'] },
+          '62': { name: 'q62_title5', text: 'Title 5', answer: 'Fifth title' },
+          '63': { name: 'q63_medium5', text: 'Medium and base 5', answer: 'Ink' },
+        },
+      },
+    ])
+
+    expect(result[0].artworks).toHaveLength(1)
+    expect(result[0].artworks[0]).toMatchObject({
+      artworkNumber: 5,
+      title: 'Fifth title',
+      medium: 'Ink',
+      imageUrl: 'https://files.jotform.com/five.jpg',
+    })
+  })
+
+  it('maps Tom reviewer vote fields onto artworks', () => {
+    const result = normalizeJotformSubmissions([
+      {
+        id: '789',
+        answers: {
+          '10': { name: 'artworkUpload1', text: 'Artwork upload 1', answer: ['https://files.jotform.com/one.jpg'] },
+          '11': { name: 'tomM1', text: 'Tom M 1', answer: 'Maybe' },
+        },
+      },
+    ])
+
+    expect(result[0].artworks[0]).toMatchObject({
+      artworkNumber: 1,
+      myVote: 'maybe',
+      jotformReviewerVoteFieldId: '11',
+    })
+  })
 })

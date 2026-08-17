@@ -69,6 +69,7 @@ type ExportDialog =
 function App() {
   const [submissions, setSubmissions] = useState<ArtistSubmission[]>([])
   const [reviewState, setReviewState] = useState<ReviewState>({})
+  const [dirtyVoteIds, setDirtyVoteIds] = useState<Set<string>>(() => new Set())
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
   const [selectedArtworkId, setSelectedArtworkId] = useState('')
   const [query, setQuery] = useState('')
@@ -116,6 +117,18 @@ function App() {
   const selectedVote = selectedArtwork ? reviewState[selectedArtwork.id] : undefined
   const progress = getReviewProgress(submissions, reviewState)
   const hasImportedData = submissions.some((submission) => submission.source === 'import')
+
+  const buildInitialReviewState = (items: ArtistSubmission[]) =>
+    Object.fromEntries(
+      items.flatMap((submission) =>
+        submission.artworks
+          .filter((artwork) => artwork.myVote)
+          .map((artwork) => [
+            artwork.id,
+            buildVote(submission.id, artwork.id, artwork.myVote as keyof VoteCounts, '', submission.submittedAt),
+          ]),
+      ),
+    )
 
   useEffect(() => {
     fetchCurrentUser()
@@ -173,6 +186,7 @@ function App() {
       selectedVote?.notes ?? '',
     )
     setReviewState((state) => upsertVote(state, nextVote))
+    setDirtyVoteIds((ids) => new Set(ids).add(selectedArtwork.id))
     setExportState('Unsynced voting changes')
     advanceAfterVote()
   }
@@ -186,6 +200,7 @@ function App() {
       notes,
     )
     setReviewState((state) => upsertVote(state, nextVote))
+    setDirtyVoteIds((ids) => new Set(ids).add(selectedArtwork.id))
     setExportState('Unsynced voting changes')
   }
 
@@ -207,7 +222,8 @@ function App() {
         0,
       )
       setSubmissions(result.submissions)
-      setReviewState({})
+      setReviewState(buildInitialReviewState(result.submissions))
+      setDirtyVoteIds(new Set())
       if (result.submissions[0]) selectSubmission(result.submissions[0])
       setSyncState({
         status: 'ready',
@@ -244,6 +260,7 @@ function App() {
     setDemoMode(true)
     setSubmissions(mockSubmissions)
     setReviewState({})
+    setDirtyVoteIds(new Set())
     if (mockSubmissions[0]) selectSubmission(mockSubmissions[0])
     setSyncState({
       status: 'ready',
@@ -257,6 +274,7 @@ function App() {
     setDemoMode(false)
     setSubmissions(importedSubmissions)
     setReviewState({})
+    setDirtyVoteIds(new Set())
     selectSubmission(importedSubmissions[0])
     setSyncState({
       status: 'ready',
@@ -403,10 +421,14 @@ function App() {
     setExportState('Submitting votes to Jotform')
     setExportDialog({ status: 'working', message: 'Submitting your votes to Jotform...' })
     try {
-      const result = await submitVotesToJotform(submissions, reviewState)
+      const dirtyReviewState = Object.fromEntries(
+        Object.entries(reviewState).filter(([artworkId]) => dirtyVoteIds.has(artworkId)),
+      )
+      const result = await submitVotesToJotform(submissions, dirtyReviewState)
       const latestSubmissions = demoMode ? submissions : (await fetchLiveSubmissions()).submissions
       if (!demoMode) setSubmissions(latestSubmissions)
-      setReviewState({})
+      setReviewState(demoMode ? reviewState : buildInitialReviewState(latestSubmissions))
+      setDirtyVoteIds(new Set())
       setExportState(`Submitted votes for ${result.updatedSubmissions} submissions`)
       setExportDialog({
         status: 'success',

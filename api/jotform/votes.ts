@@ -14,6 +14,7 @@ type ArtistSubmission = {
     artworkNumber: number
     voteCounts: VoteCounts
     jotformVoteFieldId?: string
+    jotformReviewerVoteFieldId?: string
   }>
 }
 
@@ -72,8 +73,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const fieldMapFromSubmissions = Object.fromEntries(
     submissions
       .flatMap((submission) => submission.artworks)
-      .filter((artwork) => artwork.jotformVoteFieldId)
-      .map((artwork) => [String(artwork.artworkNumber), artwork.jotformVoteFieldId as string]),
+      .filter((artwork) => artwork.jotformReviewerVoteFieldId ?? artwork.jotformVoteFieldId)
+      .map((artwork) => [
+        String(artwork.artworkNumber),
+        (artwork.jotformReviewerVoteFieldId ?? artwork.jotformVoteFieldId) as string,
+      ]),
   )
   const explicitFieldMap = readVoteFieldMap()
   const fieldMap: FieldMap = {
@@ -94,11 +98,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     for (const artwork of submission.artworks) {
       const vote = votes[artwork.id]
-      const fieldId = artwork.jotformVoteFieldId ?? fieldMap[String(artwork.artworkNumber)]
+      const fieldId = artwork.jotformReviewerVoteFieldId ?? artwork.jotformVoteFieldId ?? fieldMap[String(artwork.artworkNumber)]
       if (!vote || !fieldId) continue
 
-      const updatedCounts = addVoteToCounts(artwork.voteCounts, vote.value)
-      params.set(`submission[${fieldId}]`, formatVoteCounts(updatedCounts))
+      if (artwork.jotformReviewerVoteFieldId) {
+        params.set(`submission[${fieldId}]`, vote.value[0].toUpperCase() + vote.value.slice(1))
+      } else {
+        const updatedCounts = addVoteToCounts(artwork.voteCounts, vote.value)
+        params.set(`submission[${fieldId}]`, formatVoteCounts(updatedCounts))
+      }
     }
 
     if (params.size === 0) continue

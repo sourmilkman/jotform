@@ -60,6 +60,21 @@ const getImageUrl = (answer: JotformAnswer | undefined): string => {
   return ''
 }
 
+const getAnswerLabel = (answer: JotformAnswer) => normalizeKey(answer.text || answer.name || '')
+
+const getTrailingNumber = (value: string) => {
+  const match = normalizeKey(value).match(/(\d+)$/)
+  return match ? Number(match[1]) : 1
+}
+
+const parseSingleVote = (value: string): keyof VoteCounts | '' => {
+  const normalized = value.toLowerCase().trim()
+  if (['y', 'yes'].includes(normalized)) return 'yes'
+  if (['m', 'maybe'].includes(normalized)) return 'maybe'
+  if (['n', 'no'].includes(normalized)) return 'no'
+  return ''
+}
+
 export const parseVoteCounts = (value: string): VoteCounts => {
   const lower = value.toLowerCase()
   const findCount = (label: 'yes' | 'maybe' | 'no') => {
@@ -87,17 +102,27 @@ const findArtworkField = (
   artworkNumber: number,
   kind: 'image' | 'title' | 'medium' | 'votes',
 ) => {
-  const synonyms = {
-    image: ['artwork', 'file', 'attachment', 'image', 'upload'],
-    title: ['title'],
-    medium: ['medium'],
-    votes: ['votes', 'vote'],
-  }[kind]
+  const matches = Object.values(answers).filter((answer) => {
+    const label = getAnswerLabel(answer)
+    const fieldNumber = getTrailingNumber(answer.text || answer.name || '')
+    if (fieldNumber !== artworkNumber) return false
 
-  return Object.values(answers).find((answer) => {
-    const key = normalizeKey(`${answer.name ?? ''} ${answer.text ?? ''}`)
-    return key.includes(String(artworkNumber)) && synonyms.some((word) => key.includes(word))
+    if (kind === 'image') {
+      return (
+        label.includes('artwork') &&
+        !label.includes('title') &&
+        !label.includes('medium') &&
+        !label.includes('base') &&
+        !label.includes('vote') &&
+        !label.includes('withoutgrid')
+      )
+    }
+    if (kind === 'title') return label.includes('title')
+    if (kind === 'medium') return label.includes('medium') || label.includes('base')
+    return label.includes('vote')
   })
+
+  return matches[0]
 }
 
 const findArtworkFieldEntry = (
@@ -106,6 +131,33 @@ const findArtworkFieldEntry = (
   kind: 'image' | 'title' | 'medium' | 'votes',
 ) =>
   Object.entries(answers).find(([, answer]) => answer === findArtworkField(answers, artworkNumber, kind))
+
+const defaultReviewerLabels = ['tom m', 'tom mulliner']
+
+const getReviewerLabels = () => {
+  const runtimeProcess = (globalThis as {
+    process?: { env?: Record<string, string | undefined> }
+  }).process
+  const configured =
+    typeof runtimeProcess?.env?.JOTFORM_REVIEWER_LABELS === 'string'
+      ? runtimeProcess.env.JOTFORM_REVIEWER_LABELS
+      : ''
+  return (configured ? configured.split(',') : defaultReviewerLabels)
+    .map((label: string) => normalizeKey(label))
+    .filter(Boolean)
+}
+
+const findReviewerVoteFieldEntry = (
+  answers: Record<string, JotformAnswer>,
+  artworkNumber: number,
+) => {
+  const reviewerLabels = getReviewerLabels()
+  return Object.entries(answers).find(([, answer]) => {
+    const label = getAnswerLabel(answer)
+    if (getTrailingNumber(answer.text || answer.name || '') !== artworkNumber) return false
+    return reviewerLabels.some((reviewerLabel) => label.includes(reviewerLabel))
+  })
+}
 
 export const normalizeJotformSubmissions = (
   submissions: JotformSubmission[],
@@ -129,6 +181,8 @@ export const normalizeJotformSubmissions = (
         getAnswer(answers, ['medium']) ||
         'Medium not supplied'
       const voteFieldEntry = findArtworkFieldEntry(answers, artworkNumber, 'votes')
+      const reviewerVoteFieldEntry = findReviewerVoteFieldEntry(answers, artworkNumber)
+      const myVote = parseSingleVote(valueToString(reviewerVoteFieldEntry?.[1].answer))
 
       const fileName = imageUrl.split('/').pop()
       return {
@@ -141,7 +195,9 @@ export const normalizeJotformSubmissions = (
         voteCounts: parseVoteCounts(
           valueToString(voteFieldEntry?.[1].answer),
         ),
+        ...(myVote ? { myVote } : {}),
         ...(voteFieldEntry?.[0] ? { jotformVoteFieldId: voteFieldEntry[0] } : {}),
+        ...(reviewerVoteFieldEntry?.[0] ? { jotformReviewerVoteFieldId: reviewerVoteFieldEntry[0] } : {}),
         ...(fileName ? { fileName } : {}),
       }
     }).filter((artwork): artwork is Artwork => artwork !== null)

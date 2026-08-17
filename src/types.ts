@@ -12,7 +12,9 @@ export type Artwork = {
   medium: string
   imageUrl: string
   voteCounts: VoteCounts
+  myVote?: keyof VoteCounts
   jotformVoteFieldId?: string
+  jotformReviewerVoteFieldId?: string
   fileName?: string
 }
 
