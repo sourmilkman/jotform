@@ -37,7 +37,7 @@ export const getReviewProgress = (submissions: ArtistSubmission[], votes: Review
       count +
       submission.artworks.filter((artwork) => {
         const vote = votes[artwork.id]
-        return Boolean(vote?.value)
+        return Boolean(vote?.value || artwork.myVoteRaw)
       }).length,
     0,
   )

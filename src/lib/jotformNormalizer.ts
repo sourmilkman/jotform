@@ -84,6 +84,33 @@ const parseSingleVote = (value: string): keyof VoteCounts | '' => {
   return ''
 }
 
+const parseVoteOptionMap = () => {
+  const runtimeProcess = (globalThis as {
+    process?: { env?: Record<string, string | undefined> }
+  }).process
+  const configured = runtimeProcess?.env?.JOTFORM_VOTE_OPTION_MAP ?? ''
+  return configured
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .reduce<Record<string, keyof VoteCounts>>((map, entry) => {
+      const [rawCode, rawVote] = entry.split('=').map((part) => part?.trim())
+      const vote = parseSingleVote(rawVote ?? '')
+      if (rawCode && vote) map[rawCode.toLowerCase()] = vote
+      return map
+    }, {})
+}
+
+const parseReviewerVote = (value: string): keyof VoteCounts | '' => {
+  const directVote = parseSingleVote(value)
+  if (directVote) return directVote
+
+  const optionMap = parseVoteOptionMap()
+  const normalized = value.toLowerCase().trim()
+  const compact = normalized.replace(/[{}\s]/g, '')
+  return optionMap[normalized] ?? optionMap[`{${compact}}`] ?? optionMap[compact] ?? ''
+}
+
 export const parseVoteCounts = (value: string): VoteCounts => {
   const lower = value.toLowerCase()
   const findCount = (label: 'yes' | 'maybe' | 'no') => {
@@ -220,9 +247,10 @@ export const normalizeJotformSubmissions = (
         'Medium not supplied'
       const voteFieldEntry = findArtworkFieldEntry(answers, artworkNumber, 'votes')
       const reviewerVoteFieldEntry = findReviewerVoteFieldEntry(answers, artworkNumber)
-      const myVote = parseSingleVote(
-        valueToString(reviewerVoteFieldEntry?.[1].answer ?? reviewerVoteFieldEntry?.[1].prettyFormat),
+      const myVoteRaw = valueToString(
+        reviewerVoteFieldEntry?.[1].answer ?? reviewerVoteFieldEntry?.[1].prettyFormat,
       )
+      const myVote = parseReviewerVote(myVoteRaw)
 
       const fileName = imageUrl.split('/').pop()
       return {
@@ -236,6 +264,7 @@ export const normalizeJotformSubmissions = (
           valueToString(voteFieldEntry?.[1].answer ?? voteFieldEntry?.[1].prettyFormat),
         ),
         ...(myVote ? { myVote } : {}),
+        ...(myVoteRaw ? { myVoteRaw } : {}),
         ...(voteFieldEntry?.[0] ? { jotformVoteFieldId: voteFieldEntry[0] } : {}),
         ...(reviewerVoteFieldEntry?.[0] ? { jotformReviewerVoteFieldId: reviewerVoteFieldEntry[0] } : {}),
         ...(fileName ? { fileName } : {}),

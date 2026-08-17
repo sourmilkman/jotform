@@ -115,6 +115,7 @@ function App() {
     selectedSubmission?.artworks.find((artwork) => artwork.id === selectedArtworkId) ??
     selectedSubmission?.artworks[0]
   const selectedVote = selectedArtwork ? reviewState[selectedArtwork.id] : undefined
+  const selectedHasUnmappedSavedVote = Boolean(selectedArtwork?.myVoteRaw && !selectedVote)
   const progress = getReviewProgress(submissions, reviewState)
   const hasImportedData = submissions.some((submission) => submission.source === 'import')
 
@@ -694,7 +695,7 @@ function App() {
             {filteredSubmissions.map((submission) => {
               const reviewed = submission.artworks.filter((artwork) => {
                 const vote = reviewState[artwork.id]
-                return Boolean(vote?.value)
+                return Boolean(vote?.value || artwork.myVoteRaw)
               }).length
               return (
                 <button
@@ -755,7 +756,7 @@ function App() {
                 aria-label={`View ${artwork.title}`}
               >
                 <img src={artwork.imageUrl} alt="" loading="lazy" />
-                {reviewState[artwork.id] ? <Check size={14} aria-hidden="true" /> : null}
+                {reviewState[artwork.id] || artwork.myVoteRaw ? <Check size={14} aria-hidden="true" /> : null}
               </button>
             ))}
           </div>
@@ -783,7 +784,11 @@ function App() {
                 )
               })}
             </div>
-            <p className="vote-hint">Your vote is exported as one vote in the matching Yes, Maybe, or No total.</p>
+            {selectedHasUnmappedSavedVote ? (
+              <p className="vote-hint">Saved Jotform vote found, but this option code is not mapped to Yes, Maybe, or No yet.</p>
+            ) : (
+              <p className="vote-hint">Your vote is exported as one vote in the matching Yes, Maybe, or No total.</p>
+            )}
             <div className="council-totals" aria-label="Current council totals from Jotform">
               <span>Current Jotform totals</span>
               <strong>Y {selectedArtwork.voteCounts.yes}</strong>

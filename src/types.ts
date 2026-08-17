@@ -13,6 +13,7 @@ export type Artwork = {
   imageUrl: string
   voteCounts: VoteCounts
   myVote?: keyof VoteCounts
+  myVoteRaw?: string
   jotformVoteFieldId?: string
   jotformReviewerVoteFieldId?: string
   fileName?: string

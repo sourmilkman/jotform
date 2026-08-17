@@ -85,6 +85,28 @@ describe('normalizeJotformSubmissions', () => {
     })
   })
 
+  it('maps configured Jotform option ids onto reviewer votes', () => {
+    const runtimeProcess = (globalThis as {
+      process?: { env?: Record<string, string | undefined> }
+    }).process
+    if (runtimeProcess?.env) runtimeProcess.env.JOTFORM_VOTE_OPTION_MAP = '{abc123}=Yes,{def456}=No'
+    const result = normalizeJotformSubmissions([
+      {
+        id: 'option-id',
+        answers: {
+          '10': { name: 'artworkUpload1', text: 'Artwork upload 1', answer: ['https://files.jotform.com/one.jpg'] },
+          '11': { name: 'tomM1', text: 'Tom M 1', prettyFormat: '{abc123}' },
+        },
+      },
+    ])
+    if (runtimeProcess?.env) delete runtimeProcess.env.JOTFORM_VOTE_OPTION_MAP
+
+    expect(result[0].artworks[0]).toMatchObject({
+      myVote: 'yes',
+      myVoteRaw: '{abc123}',
+    })
+  })
+
   it('maps real RMS upload fields with sibling title and medium fields', () => {
     const result = normalizeJotformSubmissions([
       {
