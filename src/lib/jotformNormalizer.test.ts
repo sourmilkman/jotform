@@ -84,4 +84,40 @@ describe('normalizeJotformSubmissions', () => {
       jotformReviewerVoteFieldId: '11',
     })
   })
+
+  it('maps real RMS upload fields with sibling title and medium fields', () => {
+    const result = normalizeJotformSubmissions([
+      {
+        id: 'rms',
+        answers: {
+          '94': { name: 'artworkUpload', text: 'Artwork upload 1 on Grid', answer: [] },
+          '95': { name: 'mediumAnd95', text: 'Medium and base', answer: 'Acrylic' },
+          '96': { name: 'title', text: 'Title', answer: 'First title' },
+          '97': { name: 'artworkUpload97', text: 'Artwork upload 2 on Grid', answer: [] },
+          '98': { name: 'mediumAnd98', text: 'Medium and base', answer: 'Watercolour' },
+          '99': { name: 'title99', text: 'Title', answer: 'Second title' },
+          '145': { name: 'artworkUpload145', text: 'Artwork upload 1 without grid', answer: ['https://files.jotform.com/one.jpg'] },
+          '146': { name: 'artworkUpload146', text: 'Artwork upload 2 without Grid', answer: ['https://files.jotform.com/two.jpg'] },
+          '110': { name: 'rayWinder110', text: 'Tom M 1', answer: 'Yes' },
+          '114': { name: 'rayWinder114', text: 'Tom M 2', answer: 'No' },
+        },
+      },
+    ])
+
+    expect(result[0].artworks).toHaveLength(2)
+    expect(result[0].artworks[0]).toMatchObject({
+      artworkNumber: 1,
+      title: 'First title',
+      medium: 'Acrylic',
+      imageUrl: 'https://files.jotform.com/one.jpg',
+      myVote: 'yes',
+    })
+    expect(result[0].artworks[1]).toMatchObject({
+      artworkNumber: 2,
+      title: 'Second title',
+      medium: 'Watercolour',
+      imageUrl: 'https://files.jotform.com/two.jpg',
+      myVote: 'no',
+    })
+  })
 })

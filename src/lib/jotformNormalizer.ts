@@ -62,9 +62,17 @@ const getImageUrl = (answer: JotformAnswer | undefined): string => {
 
 const getAnswerLabel = (answer: JotformAnswer) => normalizeKey(answer.text || answer.name || '')
 
-const getTrailingNumber = (value: string) => {
-  const match = normalizeKey(value).match(/(\d+)$/)
-  return match ? Number(match[1]) : 1
+const getArtworkNumberFromLabel = (answer: JotformAnswer) => {
+  const label = normalizeKey(`${answer.text ?? ''} ${answer.name ?? ''}`)
+  const artworkMatch = label.match(/artwork(?:upload)?(\d)/)
+  if (artworkMatch) return Number(artworkMatch[1])
+  const reviewerMatch = normalizeKey(answer.text || answer.name || '').match(/(\d)$/)
+  return reviewerMatch ? Number(reviewerMatch[1]) : 1
+}
+
+const getNumericFieldId = (fieldId: string) => {
+  const numeric = Number(fieldId)
+  return Number.isFinite(numeric) ? numeric : 0
 }
 
 const parseSingleVote = (value: string): keyof VoteCounts | '' => {
@@ -102,9 +110,9 @@ const findArtworkField = (
   artworkNumber: number,
   kind: 'image' | 'title' | 'medium' | 'votes',
 ) => {
-  const matches = Object.values(answers).filter((answer) => {
+  const matches = Object.entries(answers).filter(([, answer]) => {
     const label = getAnswerLabel(answer)
-    const fieldNumber = getTrailingNumber(answer.text || answer.name || '')
+    const fieldNumber = getArtworkNumberFromLabel(answer)
     if (fieldNumber !== artworkNumber) return false
 
     if (kind === 'image') {
@@ -113,8 +121,7 @@ const findArtworkField = (
         !label.includes('title') &&
         !label.includes('medium') &&
         !label.includes('base') &&
-        !label.includes('vote') &&
-        !label.includes('withoutgrid')
+        !label.includes('vote')
       )
     }
     if (kind === 'title') return label.includes('title')
@@ -122,7 +129,15 @@ const findArtworkField = (
     return label.includes('vote')
   })
 
-  return matches[0]
+  if (kind === 'image') {
+    return (
+      matches.find(([, answer]) => getImageUrl(answer) && getAnswerLabel(answer).includes('ongrid'))?.[1] ??
+      matches.find(([, answer]) => getImageUrl(answer))?.[1] ??
+      matches[0]?.[1]
+    )
+  }
+
+  return matches[0]?.[1]
 }
 
 const findArtworkFieldEntry = (
@@ -131,6 +146,28 @@ const findArtworkFieldEntry = (
   kind: 'image' | 'title' | 'medium' | 'votes',
 ) =>
   Object.entries(answers).find(([, answer]) => answer === findArtworkField(answers, artworkNumber, kind))
+
+const findArtworkMetadataField = (
+  answers: Record<string, JotformAnswer>,
+  artworkNumber: number,
+  kind: 'title' | 'medium',
+) => {
+  const gridImageEntry = Object.entries(answers).find(([, answer]) => {
+    const label = getAnswerLabel(answer)
+    return (
+      getArtworkNumberFromLabel(answer) === artworkNumber &&
+      label.includes('artwork') &&
+      label.includes('upload') &&
+      label.includes('ongrid')
+    )
+  })
+  const gridImageId = gridImageEntry ? getNumericFieldId(gridImageEntry[0]) : 0
+  const siblingOffset = kind === 'medium' ? 1 : 2
+  const sibling = gridImageId ? answers[String(gridImageId + siblingOffset)] : undefined
+  if (sibling) return sibling
+
+  return findArtworkField(answers, artworkNumber, kind)
+}
 
 const defaultReviewerLabels = ['tom m', 'tom mulliner']
 
@@ -154,7 +191,7 @@ const findReviewerVoteFieldEntry = (
   const reviewerLabels = getReviewerLabels()
   return Object.entries(answers).find(([, answer]) => {
     const label = getAnswerLabel(answer)
-    if (getTrailingNumber(answer.text || answer.name || '') !== artworkNumber) return false
+    if (getArtworkNumberFromLabel(answer) !== artworkNumber) return false
     return reviewerLabels.some((reviewerLabel) => label.includes(reviewerLabel))
   })
 }
@@ -174,10 +211,10 @@ export const normalizeJotformSubmissions = (
       if (!imageUrl) return null
 
       const title =
-        valueToString(findArtworkField(answers, artworkNumber, 'title')?.answer) ||
+        valueToString(findArtworkMetadataField(answers, artworkNumber, 'title')?.answer) ||
         `Artwork ${artworkNumber}`
       const medium =
-        valueToString(findArtworkField(answers, artworkNumber, 'medium')?.answer) ||
+        valueToString(findArtworkMetadataField(answers, artworkNumber, 'medium')?.answer) ||
         getAnswer(answers, ['medium']) ||
         'Medium not supplied'
       const voteFieldEntry = findArtworkFieldEntry(answers, artworkNumber, 'votes')
