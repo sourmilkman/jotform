@@ -240,7 +240,6 @@ function App() {
           artworkCount > 0
             ? `Loaded ${result.submissions.length} live submissions and ${artworkCount} artworks.`
             : `Found ${result.submissions.length} live submissions, but no artwork attachments were recognized. The Jotform field mapping needs updating.`,
-        spreadsheetUrl: 'https://eu.jotform.com/tables/233391657291361',
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Could not sync Jotform'
@@ -433,7 +432,6 @@ function App() {
       setExportDialog({
         status: 'success',
         message: `Submitted your votes to ${result.updatedSubmissions} Jotform submissions, then refreshed the UI.`,
-        spreadsheetUrl: 'https://eu.jotform.com/tables/233391657291361',
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Jotform vote submit failed'
