@@ -785,7 +785,9 @@ function App() {
               })}
             </div>
             {selectedHasUnmappedSavedVote ? (
-              <p className="vote-hint">Saved Jotform vote found, but this option code is not mapped to Yes, Maybe, or No yet.</p>
+              <p className="vote-hint">
+                Saved Jotform vote found, but code {selectedArtwork.myVoteRaw} is not mapped to Yes, Maybe, or No yet.
+              </p>
             ) : (
               <p className="vote-hint">Your vote is exported as one vote in the matching Yes, Maybe, or No total.</p>
             )}
